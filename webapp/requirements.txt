@@ -2,5 +2,6 @@ fastapi>=0.110
 uvicorn[standard]>=0.27
 apscheduler>=3.10
 pydantic>=2.6
+email-validator>=2.1
 requests>=2.31
 python-dotenv>=1.0
