@@ -151,6 +151,7 @@ def process_order(order_id: int):
     if not order or order["status"] != "pending":
         return
 
+    print(f"[주문 {order_id}] 처리 시작: {order['name']}")
     db.mark_processing(order_id)
     try:
         y, m, d = order["birth_date"].split("-")
@@ -166,28 +167,37 @@ def process_order(order_id: int):
             "gender": order["gender"],
         }
 
+        print(f"[주문 {order_id}] 사주 계산 + AI 해석문 생성 시작 (1~2분 소요)...")
         pdf_path = generate_full_report(customer, output_dir=OUTPUT_DIR)
+        print(f"[주문 {order_id}] PDF 생성 완료: {pdf_path}")
 
         # 카카오 알림톡 발송 (실패해도 이메일은 계속 시도)
         kakao_error = None
         try:
             send_kakao_alimtalk(order["phone"], order["name"], os.path.basename(pdf_path))
+            print(f"[주문 {order_id}] 카카오 알림톡 발송 완료")
         except Exception as e:
             kakao_error = str(e)
+            print(f"[주문 {order_id}] 카카오 알림톡 발송 실패: {kakao_error}")
 
         email_error = None
         try:
             send_email_with_pdf(order["email"], order["name"], pdf_path)
+            print(f"[주문 {order_id}] 이메일 발송 완료")
         except Exception as e:
             email_error = str(e)
+            print(f"[주문 {order_id}] 이메일 발송 실패: {email_error}")
 
         if kakao_error and email_error:
             db.mark_failed(order_id, f"카톡: {kakao_error} / 이메일: {email_error}")
+            print(f"[주문 {order_id}] 최종 실패 (카톡/이메일 둘 다 실패)")
         else:
             db.mark_sent(order_id, pdf_path)
+            print(f"[주문 {order_id}] 최종 완료")
 
     except Exception as e:
         db.mark_failed(order_id, str(e))
+        print(f"[주문 {order_id}] 처리 중 오류로 실패: {e}")
 
 
 # ---------------------------------------------------------------------------
