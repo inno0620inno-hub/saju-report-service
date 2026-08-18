@@ -16,7 +16,8 @@ from report_prompts import SECTION_SPECS
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 
 OHENG_COLOR_VAR = {"목": "wood", "화": "fire", "토": "earth", "금": "metal", "수": "water"}
-HANJA_NUMERALS = ["一", "二", "三", "四", "五", "六", "七", "八", "九", "十", "十一", "十二"]
+HANJA_NUMERALS = ["一", "二", "三", "四", "五", "六", "七", "八", "九", "十",
+                   "十一", "十二", "十三", "十四", "十五", "十六", "十七", "十八", "十九", "二十"]
 
 
 def render_pillar_cards(data):
@@ -163,10 +164,13 @@ def _render_toc_page(section_keys, page_num):
 
 
 def build_report(data, name, birth_info, sections, section_order=None,
-                  product_name="사주 명식 리포트", output_pdf="saju_report.pdf"):
+                  product_name="사주 명식 리포트", output_pdf="saju_report.pdf",
+                  watermark=False):
     """
     sections: {section_key: 해석문_텍스트} 딕셔너리
     section_order: 섹션을 표시할 순서 (list of keys). None이면 sections의 키 순서 사용.
+    watermark: True면 모든 페이지에 '샘플 · 미리보기' 워터마크를 찍는다
+               (실제 결제된 리포트와 구분하기 위한 테스트/샘플용 표시).
     """
     if section_order is None:
         section_order = list(sections.keys())
@@ -186,11 +190,23 @@ def build_report(data, name, birth_info, sections, section_order=None,
         body_parts.append(_render_section_page(key, data, sections[key], chapter_num_str, page_num))
         page_num += 1
 
+    body_html = "\n".join(body_parts)
+
+    if watermark:
+        watermark_div = (
+            '<div style="position:absolute; top:45%; left:50%; transform:translate(-50%,-50%) rotate(-30deg); '
+            'font-size:64px; font-weight:900; color:rgba(212,175,90,0.18); letter-spacing:8px; '
+            'white-space:nowrap; z-index:999; pointer-events:none;">SAMPLE · 미리보기</div>'
+        )
+        # 각 페이지(<div class="page-inner">로 시작)마다 워터마크를 삽입
+        body_html = body_html.replace('<div class="page-inner">', '<div class="page-inner">' + watermark_div)
+        html = html.replace('<div class="page-inner">', '<div class="page-inner">' + watermark_div)  # 표지용
+
     replacements = {
         "{{NAME}}": name,
         "{{BIRTH_INFO}}": birth_info,
         "{{ISSUE_DATE}}": "2026",
-        "{{BODY_PAGES}}": "\n".join(body_parts),
+        "{{BODY_PAGES}}": body_html,
     }
     for k, v in replacements.items():
         html = html.replace(k, v)
