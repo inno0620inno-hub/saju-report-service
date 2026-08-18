@@ -181,6 +181,60 @@ def _req_자녀운(data, period=None):
 - 확정적 자녀 유무/시기 단언은 하지 말 것, 성향과 태도 위주로 서술
 """
 
+def _req_십신해설(data, period=None):
+    sipsin = data["sipsin"]
+    lines = "\n".join(
+        f"  {v['label']}({data[k]['gan']}): {v['sipsin']} - {v['meaning']}"
+        for k, v in sipsin.items()
+    )
+    return f"""
+[십신(十神) 데이터 — 일간 {data['day_master']} 기준]
+{lines}
+
+[요청]
+'십신으로 보는 나와 주변' 섹션을 작성하라 (1200~1500자 분량).
+- 위 십신 데이터를 근거로, 이 사람이 가족·동료·주변 사람들과 맺는 관계의 패턴을 설명
+- 각 십신이 나타내는 의미를 그대로 나열하지 말고, 이 사주 전체 맥락에서 자연스럽게 녹여 서술
+- 십신이라는 용어를 처음 듣는 사람도 이해할 수 있도록 쉬운 말로 풀어줄 것
+- 마지막에 이 사람이 대인관계에서 강점으로 삼을 수 있는 부분을 한 문단으로 정리
+"""
+
+def _req_오행상세(data, period=None):
+    dist = data["oheng_distribution"]
+    strongest = max(dist, key=dist.get)
+    weakest = min(dist, key=dist.get)
+    return f"""
+[오행 분포 데이터]
+{dist}
+가장 강한 오행: {strongest} / 가장 약한 오행: {weakest}
+
+[요청]
+'오행으로 보는 기질의 결' 섹션을 작성하라 (1400~1700자 분량). 목·화·토·금·수 다섯 오행을
+각각 소제목으로 나누고, 이 사주에 각 오행이 몇 개씩 있는지 데이터를 근거로 짧게(오행당
+200~300자) 설명하라.
+- 많이 가진 오행: 그 기운이 강하게 드러나는 성향을 구체적으로
+- 적거나 없는 오행: 부족해서 나타날 수 있는 경향과, 일상에서 보완하는 방법을 함께
+- 오행 다섯 개를 전부 다루되, 이 사주에서 가장 두드러지는 오행({strongest})에 대한
+  설명을 가장 비중있게 다룰 것
+"""
+
+def _req_5개년세운(data, period_list):
+    lines = "\n".join(
+        f"  {p['year']}년: {p['se_un']['str']}({p['se_un']['hanja']}) - 오행 {p['se_un']['gan_oheng']}/{p['se_un']['ji_oheng']}"
+        for p in period_list
+    )
+    return f"""
+[향후 5개년 세운 데이터]
+{lines}
+
+[요청]
+'향후 5년 흐름'  섹션을 작성하라 (1800~2200자 분량). 위 5개 연도를 각각 소제목으로 나누고,
+연도별로 250~350자씩 서술하라.
+- 각 연도의 세운이 원국(原局)과 만나 어떤 색깔의 해가 되는지
+- 5년 전체를 관통하는 흐름(상승기/다지는 시기/전환점 등)이 있다면 마지막에 한 문단으로 정리
+- 연도마다 서로 다른 톤이 드러나야 한다 (모든 해가 비슷하게 읽히면 안 됨)
+"""
+
 
 SECTION_SPECS = {
     "총론":     {"title": "총론",           "eyebrow": "OVERVIEW",        "subtitle": "이 사주의 큰 그림",         "requirement_fn": _req_총론,     "needs_period": False},
@@ -195,11 +249,14 @@ SECTION_SPECS = {
     "이직운":   {"title": "이직·취업운",    "eyebrow": "CAREER",          "subtitle": "커리어의 방향과 시기",      "requirement_fn": _req_이직운,   "needs_period": False},
     "학업운":   {"title": "학업운",         "eyebrow": "STUDY",           "subtitle": "집중이 잘 되는 시기",       "requirement_fn": _req_학업운,   "needs_period": False},
     "자녀운":   {"title": "자녀운",         "eyebrow": "FAMILY",          "subtitle": "자녀와 관계 맺는 방식",     "requirement_fn": _req_자녀운,   "needs_period": False},
+    "십신해설": {"title": "십신으로 보는 나와 주변", "eyebrow": "TEN GODS", "subtitle": "관계 속에서 드러나는 기질", "requirement_fn": _req_십신해설, "needs_period": False},
+    "오행상세": {"title": "오행으로 보는 기질의 결", "eyebrow": "FIVE ELEMENTS", "subtitle": "목화토금수, 다섯 결의 균형", "requirement_fn": _req_오행상세, "needs_period": False},
+    "5개년세운": {"title": "향후 5년 흐름", "eyebrow": "5-YEAR OUTLOOK", "subtitle": "다가올 다섯 해의 색깔",      "requirement_fn": _req_5개년세운, "needs_period": False, "needs_period_list": True},
 }
 
 
 def build_section_prompt(section, data, profile_kernel=None, prior_sections_summary=None,
-                          period=None, extra_context=""):
+                          period=None, period_list=None, extra_context=""):
     if section not in SECTION_SPECS:
         raise ValueError(f"알 수 없는 섹션: {section}")
     spec = SECTION_SPECS[section]
@@ -239,8 +296,13 @@ def build_section_prompt(section, data, profile_kernel=None, prior_sections_summ
 
     if spec["needs_period"] and period is None:
         raise ValueError(f"섹션 '{section}'은(는) period(세운/월운 데이터)가 필요합니다.")
+    if spec.get("needs_period_list") and period_list is None:
+        raise ValueError(f"섹션 '{section}'은(는) period_list(여러 해의 세운 데이터)가 필요합니다.")
 
-    requirement = spec["requirement_fn"](data, period)
+    if spec.get("needs_period_list"):
+        requirement = spec["requirement_fn"](data, period_list)
+    else:
+        requirement = spec["requirement_fn"](data, period)
     return base_header + requirement + ("\n\n" + extra_context if extra_context else "")
 
 
@@ -252,6 +314,10 @@ PRODUCTS = [
     {"id": "full", "name": "종합 사주 리포트", "price": 19900,
      "description": "총론부터 대운·재물·애정·건강까지 한번에",
      "sections": ["총론", "성격", "대운흐름", "재물운", "애정운", "건강운"]},
+    {"id": "premium", "name": "프리미엄 심층 리포트", "price": 39900,
+     "description": "십신·오행 심층분석 + 향후 5년 흐름까지 총망라",
+     "sections": ["총론", "성격", "오행상세", "십신해설", "대운흐름", "5개년세운",
+                  "재물운", "사업운", "애정운", "이직운", "학업운", "자녀운", "건강운"]},
     {"id": "new_year", "name": "신년운세", "price": 9900,
      "description": "올해 한 해의 흐름을 짚어드립니다",
      "sections": ["총론", "신년세운", "재물운", "애정운", "건강운"]},
