@@ -27,14 +27,14 @@
 
   body {
     font-family: 'Noto Sans CJK KR', sans-serif;
-    background: var(--ink);
-    color: var(--paper);
+    background: #16140F;
+    color: #F3EDE0;
   }
 
   .page {
     width: 100%;
-    height: 1440px;
-    padding: 108px 99px;
+    height: 297mm;
+    padding: 22mm 20mm;
     position: relative;
     page-break-after: always;
     overflow: hidden;
@@ -48,176 +48,175 @@
   .cover {
     background:
       radial-gradient(circle at 50% 18%, rgba(212,175,90,0.18), transparent 45%),
-      var(--ink);
+      #16140F;
     display: table;
   }
   .cover .page-inner {
     display: table-cell;
     vertical-align: middle;
     text-align: center;
-    height: 1224px;
   }
   .cover .eyebrow {
     letter-spacing: 0.5em;
-    font-size: 14.32px;
-    color: var(--gold);
-    margin-bottom: 36.46px;
+    font-size: 11px;
+    color: #B8923F;
+    margin-bottom: 28px;
   }
   .cover .hanja-big {
     font-family: 'Noto Serif CJK KR', serif;
-    font-size: 119.79px;
+    font-size: 92px;
     font-weight: 700;
-    color: var(--paper);
+    color: #F3EDE0;
     line-height: 1.05;
-    margin-bottom: 7.81px;
+    margin-bottom: 6px;
   }
   .cover .title-kr {
     font-family: 'Noto Serif CJK KR', serif;
-    font-size: 39.06px;
+    font-size: 30px;
     font-weight: 600;
-    color: var(--gold-bright);
-    margin-bottom: 52.08px;
+    color: #D4AF5A;
+    margin-bottom: 40px;
   }
   .cover .divider {
-    width: 78.12px; height: 1.30px; background: var(--gold);
-    margin: 0 auto 52.08px auto;
+    width: 60px; height: 1px; background: #B8923F;
+    margin: 0 auto 40px auto;
   }
   .cover .subject-name {
-    font-size: 28.65px;
-    color: var(--paper);
-    margin-bottom: 10.42px;
+    font-size: 22px;
+    color: #F3EDE0;
+    margin-bottom: 8px;
     font-weight: 700;
   }
   .cover .subject-meta {
-    font-size: 16.93px;
-    color: var(--paper-dim);
+    font-size: 13px;
+    color: #C9C0AC;
     letter-spacing: 0.05em;
   }
   .cover .footer-mark {
     position: absolute;
-    bottom: 117.19px;
-    font-size: 13px;
-    color: var(--paper-dim);
+    bottom: 90px;
+    font-size: 10px;
+    color: #C9C0AC;
     letter-spacing: 0.3em;
   }
 
   /* ---------- 공통 섹션 헤더 ---------- */
   .chapter-mark {
     font-family: 'Noto Serif CJK KR', serif;
-    font-size: 57.29px;
-    color: var(--gold);
+    font-size: 44px;
+    color: #B8923F;
     line-height: 1;
-    margin-bottom: 7.81px;
+    margin-bottom: 6px;
   }
   .chapter-eyebrow {
-    font-size: 14.32px;
+    font-size: 11px;
     letter-spacing: 0.35em;
-    color: var(--paper-dim);
-    margin-bottom: 23.44px;
+    color: #C9C0AC;
+    margin-bottom: 18px;
   }
   .chapter-title {
     font-family: 'Noto Serif CJK KR', serif;
-    font-size: 41.67px;
+    font-size: 32px;
     font-weight: 700;
-    color: var(--paper);
-    margin-bottom: 7.81px;
+    color: #F3EDE0;
+    margin-bottom: 6px;
   }
   .chapter-title-sub {
-    font-size: 18.23px;
-    color: var(--gold-bright);
-    margin-bottom: 36.46px;
+    font-size: 14px;
+    color: #D4AF5A;
+    margin-bottom: 28px;
   }
   .rule {
-    height: 1.30px;
-    background: linear-gradient(90deg, var(--gold), transparent);
-    margin-bottom: 33.85px;
+    height: 1px;
+    background: linear-gradient(90deg, #B8923F, transparent);
+    margin-bottom: 26px;
   }
   .body-text {
-    font-size: 17.58px;
+    font-size: 13.50px;
     line-height: 2.05;
     color: #E7E1D2;
     text-align: justify;
   }
-  .body-text p { margin-bottom: 20.83px; }
+  .body-text p { margin-bottom: 16px; }
 
   .page-num {
     position: absolute;
-    bottom: 69px; right: 99px;
-    font-size: 13px;
-    color: var(--paper-dim);
+    bottom: 53px; right: 76px;
+    font-size: 10px;
+    color: #C9C0AC;
     letter-spacing: 0.2em;
   }
 
   /* ---------- 사주 원국 명패(시그니처) ---------- */
   .myeongsik {
     display: flex;
-    gap: 13px;
-    margin: 13px 0 39.06px 0;
+    gap: 10px;
+    margin: 10px 0 30px 0;
   }
   .pillar-card {
     flex: 1;
-    background: var(--ink-soft);
-    border: 1.30px solid rgba(184,146,63,0.35);
-    border-radius: 2.60px;
-    padding: 18.23px 10.42px;
+    background: #201D17;
+    border: 1px solid rgba(184,146,63,0.35);
+    border-radius: 2px;
+    padding: 14px 8px;
     text-align: center;
   }
   .pillar-label {
-    font-size: 13px;
-    color: var(--paper-dim);
+    font-size: 10px;
+    color: #C9C0AC;
     letter-spacing: 0.2em;
-    margin-bottom: 13px;
+    margin-bottom: 10px;
   }
   .pillar-char {
     font-family: 'Noto Serif CJK KR', serif;
-    font-size: 39.06px;
+    font-size: 30px;
     font-weight: 700;
     line-height: 1.5;
   }
   .pillar-hanja {
-    font-size: 14.32px;
-    color: var(--paper-dim);
-    margin-top: 5.21px;
+    font-size: 11px;
+    color: #C9C0AC;
+    margin-top: 4px;
   }
-  .oheng-목 { color: var(--wood); }
-  .oheng-화 { color: var(--fire); }
-  .oheng-토 { color: var(--earth); }
-  .oheng-금 { color: var(--metal); }
-  .oheng-수 { color: var(--water); }
+  .oheng-목 { color: #4C7A52; }
+  .oheng-화 { color: #B03A2E; }
+  .oheng-토 { color: #C9A227; }
+  .oheng-금 { color: #C9C4B4; }
+  .oheng-수 { color: #3A5A8C; }
 
   /* ---------- 오행 분포 바 ---------- */
-  .oheng-bars { margin: 31.25px 0 44.27px 0; }
-  .oheng-row { display: flex; align-items: center; gap: 15.62px; margin-bottom: 11.72px; }
-  .oheng-name { width: 44.27px; font-size: 16.93px; color: var(--paper); }
-  .oheng-track { flex: 1; height: 10.42px; background: var(--ink-soft); border-radius: 5.21px; overflow: hidden; }
-  .oheng-fill { height: 100%; border-radius: 5.21px; }
-  .oheng-count { width: 26px; font-size: 15.62px; color: var(--paper-dim); text-align: right; }
+  .oheng-bars { margin: 24px 0 34px 0; }
+  .oheng-row { display: flex; align-items: center; gap: 12px; margin-bottom: 9px; }
+  .oheng-name { width: 34px; font-size: 13px; color: #F3EDE0; }
+  .oheng-track { flex: 1; height: 8px; background: #201D17; border-radius: 4px; overflow: hidden; }
+  .oheng-fill { height: 100%; border-radius: 4px; }
+  .oheng-count { width: 20px; font-size: 12px; color: #C9C0AC; text-align: right; }
 
   /* ---------- 대운 타임라인 ---------- */
   .daeun-timeline {
     display: flex;
-    margin: 36.46px 0;
-    border-top: 1.30px solid rgba(184,146,63,0.3);
-    padding-top: 26px;
+    margin: 28px 0;
+    border-top: 1px solid rgba(184,146,63,0.3);
+    padding-top: 20px;
   }
-  .daeun-step { flex: 1; text-align: center; position: relative; padding: 0 5.21px; }
+  .daeun-step { flex: 1; text-align: center; position: relative; padding: 0 4px; }
   .daeun-step::before {
     content: "";
-    position: absolute; top: -27.34px; left: 50%; transform: translateX(-50%);
-    width: 9.11px; height: 9.11px; border-radius: 50%;
-    background: var(--gold);
+    position: absolute; top: -21px; left: 50%; transform: translateX(-50%);
+    width: 7px; height: 7px; border-radius: 50%;
+    background: #B8923F;
   }
-  .daeun-age { font-size: 13px; color: var(--paper-dim); margin-bottom: 7.81px; }
-  .daeun-gz { font-family: 'Noto Serif CJK KR', serif; font-size: 20.83px; font-weight: 700; }
+  .daeun-age { font-size: 10px; color: #C9C0AC; margin-bottom: 6px; }
+  .daeun-gz { font-family: 'Noto Serif CJK KR', serif; font-size: 16px; font-weight: 700; }
 
   .callout {
-    background: var(--ink-soft);
-    border-left: 3.91px solid var(--gold);
-    padding: 18.23px 23.44px;
-    font-size: 16.28px;
-    color: var(--paper-dim);
+    background: #201D17;
+    border-left: 3px solid #B8923F;
+    padding: 14px 18px;
+    font-size: 12.50px;
+    color: #C9C0AC;
     line-height: 1.8;
-    margin-top: 26px;
+    margin-top: 20px;
   }
 
   /* ---------- 목차 ---------- */
@@ -225,12 +224,12 @@
     display: flex;
     align-items: baseline;
     justify-content: space-between;
-    padding: 18.23px 0;
-    border-bottom: 1.30px solid rgba(184,146,63,0.2);
+    padding: 14px 0;
+    border-bottom: 1px solid rgba(184,146,63,0.2);
   }
-  .toc-mark { font-family: 'Noto Serif CJK KR', serif; color: var(--gold); font-size: 23.44px; width: 52.08px; }
-  .toc-name { flex: 1; font-size: 19.53px; color: var(--paper); }
-  .toc-page { font-size: 15.62px; color: var(--paper-dim); }
+  .toc-mark { font-family: 'Noto Serif CJK KR', serif; color: #B8923F; font-size: 18px; width: 40px; }
+  .toc-name { flex: 1; font-size: 15px; color: #F3EDE0; }
+  .toc-page { font-size: 12px; color: #C9C0AC; }
 </style>
 </head>
 <body>
