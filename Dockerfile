@@ -4,9 +4,19 @@
 FROM python:3.12-slim
 
 # PDF 생성에 필요한 프로그램(wkhtmltopdf)과 한글 폰트를 설치
+# (wkhtmltopdf는 기본 저장소에 없어서 공식 배포 파일을 직접 받아 설치합니다)
 RUN apt-get update && apt-get install -y \
-    wkhtmltopdf \
+    wget \
+    xfonts-75dpi \
+    xfonts-base \
+    fontconfig \
+    libjpeg62-turbo \
+    libxrender1 \
+    libxext6 \
     fonts-noto-cjk \
+    && wget -q https://github.com/wkhtmltopdf/packaging/releases/download/0.12.6.1-3/wkhtmltox_0.12.6.1-3.bookworm_amd64.deb \
+    && (dpkg -i wkhtmltox_0.12.6.1-3.bookworm_amd64.deb || apt-get install -f -y) \
+    && rm wkhtmltox_0.12.6.1-3.bookworm_amd64.deb \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
