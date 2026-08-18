@@ -24,6 +24,8 @@ def init_db():
             birth_time TEXT,
             time_unknown INTEGER NOT NULL DEFAULT 0,
             gender TEXT NOT NULL,
+            product_id TEXT NOT NULL DEFAULT 'full',
+            price INTEGER NOT NULL DEFAULT 0,
             delivery_mode TEXT NOT NULL,
             scheduled_at TEXT,
             status TEXT NOT NULL DEFAULT 'pending',
@@ -51,18 +53,42 @@ def create_order(data: dict) -> int:
         cur = conn.execute("""
             INSERT INTO orders
             (name, phone, email, birth_date, birth_time, time_unknown, gender,
-             delivery_mode, scheduled_at, status, created_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?)
+             product_id, price, delivery_mode, scheduled_at, status, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'awaiting_payment', ?)
         """, (
             data["name"], data["phone"], data["email"],
             data["birth_date"], data.get("birth_time"),
             1 if data.get("time_unknown") else 0,
-            data["gender"], data["delivery_mode"],
-            data.get("scheduled_at"),
+            data["gender"], data["product_id"], data["price"],
+            data["delivery_mode"], data.get("scheduled_at"),
             datetime.utcnow().isoformat(),
         ))
         conn.commit()
         return cur.lastrowid
+
+
+def get_awaiting_payment_orders():
+    """입금 확인을 기다리고 있는 주문들 (관리자 페이지에 표시)."""
+    with get_conn() as conn:
+        rows = conn.execute("""
+            SELECT * FROM orders WHERE status = 'awaiting_payment'
+            ORDER BY created_at ASC
+        """).fetchall()
+        return [dict(r) for r in rows]
+
+
+def confirm_payment(order_id: int):
+    """
+    관리자가 '입금확인' 버튼을 눌렀을 때 호출.
+    실제 입금 여부는 시스템이 검증하지 않는다 — 관리자의 육안 확인을 그대로 신뢰한다.
+    상태를 'pending'으로 바꿔주면, 즉시발송 주문은 바로 처리되고
+    예약발송 주문은 예약 시각에 맞춰 스케줄러가 처리한다.
+    """
+    with get_conn() as conn:
+        conn.execute("""
+            UPDATE orders SET status='pending' WHERE id=? AND status='awaiting_payment'
+        """, (order_id,))
+        conn.commit()
 
 
 def get_due_orders(now_iso: str):
