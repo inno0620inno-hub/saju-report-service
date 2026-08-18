@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>사주 명식 리포트 신청</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --ink: #16140F;
+    --ink-soft: #201D17;
+    --ink-softer: #2A251C;
+    --paper: #F3EDE0;
+    --paper-dim: #C9C0AC;
+    --gold: #B8923F;
+    --gold-bright: #D4AF5A;
+    --error: #C0524A;
+    --wood: #4C7A52; --fire: #B03A2E; --earth: #C9A227; --metal: #C9C4B4; --water: #3A5A8C;
+  }
+
+  html, body {
+    background: var(--ink);
+    color: var(--paper);
+    font-family: -apple-system, BlinkMacSystemFont, 'Noto Sans KR', 'Malgun Gothic', sans-serif;
+    min-height: 100vh;
+  }
+
+  .hero {
+    padding: 64px 20px 40px 20px;
+    text-align: center;
+    background: radial-gradient(circle at 50% 0%, rgba(212,175,90,0.14), transparent 55%);
+  }
+  .hero .eyebrow {
+    letter-spacing: 0.4em;
+    font-size: 11px;
+    color: var(--gold);
+    margin-bottom: 20px;
+  }
+  .hero .hanja {
+    font-size: 56px;
+    font-weight: 700;
+    color: var(--paper);
+    line-height: 1;
+    margin-bottom: 8px;
+    font-family: Georgia, serif;
+  }
+  .hero h1 {
+    font-size: 26px;
+    font-weight: 700;
+    margin-bottom: 14px;
+    color: var(--paper);
+  }
+  .hero p {
+    color: var(--paper-dim);
+    font-size: 14.5px;
+    line-height: 1.7;
+    max-width: 480px;
+    margin: 0 auto;
+  }
+
+  .oheng-strip {
+    display: flex;
+    justify-content: center;
+    gap: 6px;
+    margin: 24px 0 0 0;
+  }
+  .oheng-dot { width: 8px; height: 8px; border-radius: 50%; }
+
+  .container {
+    max-width: 520px;
+    margin: 0 auto;
+    padding: 0 20px 60px 20px;
+  }
+
+  .card {
+    background: var(--ink-soft);
+    border: 1px solid rgba(184,146,63,0.25);
+    border-radius: 4px;
+    padding: 32px 26px;
+  }
+
+  .field { margin-bottom: 22px; }
+  .field label {
+    display: block;
+    font-size: 12.5px;
+    color: var(--gold-bright);
+    letter-spacing: 0.05em;
+    margin-bottom: 8px;
+  }
+  .field .hint {
+    font-size: 11.5px;
+    color: var(--paper-dim);
+    margin-top: 6px;
+  }
+
+  input[type=text], input[type=tel], input[type=email], input[type=date],
+  input[type=time], input[type=datetime-local], select {
+    width: 100%;
+    background: var(--ink-softer);
+    border: 1px solid rgba(201,192,172,0.2);
+    border-radius: 3px;
+    padding: 12px 14px;
+    color: var(--paper);
+    font-size: 14.5px;
+    font-family: inherit;
+  }
+  input::placeholder { color: #6b6558; }
+  input:focus, select:focus {
+    outline: none;
+    border-color: var(--gold);
+  }
+
+  .row2 { display: flex; gap: 12px; }
+  .row2 > div { flex: 1; }
+
+  .radio-group { display: flex; gap: 10px; flex-wrap: wrap; }
+  .radio-option {
+    flex: 1;
+    min-width: 100px;
+    position: relative;
+  }
+  .radio-option input { position: absolute; opacity: 0; width: 0; height: 0; }
+  .radio-option label {
+    display: block;
+    text-align: center;
+    padding: 12px 8px;
+    background: var(--ink-softer);
+    border: 1px solid rgba(201,192,172,0.2);
+    border-radius: 3px;
+    font-size: 13.5px;
+    color: var(--paper-dim);
+    cursor: pointer;
+    margin: 0;
+  }
+  .radio-option input:checked + label {
+    border-color: var(--gold);
+    color: var(--gold-bright);
+    background: rgba(184,146,63,0.12);
+  }
+
+  .checkbox-line {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    color: var(--paper-dim);
+  }
+  .checkbox-line input { width: 16px; height: 16px; }
+
+  #scheduleBlock { display: none; margin-top: 14px; }
+  #scheduleBlock.show { display: block; }
+
+  .submit-btn {
+    width: 100%;
+    background: linear-gradient(135deg, var(--gold-bright), var(--gold));
+    color: var(--ink);
+    font-weight: 700;
+    font-size: 15.5px;
+    border: none;
+    border-radius: 3px;
+    padding: 15px;
+    cursor: pointer;
+    margin-top: 8px;
+    letter-spacing: 0.02em;
+  }
+  .submit-btn:hover { filter: brightness(1.08); }
+  .submit-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  .disclaimer {
+    font-size: 11.5px;
+    color: var(--paper-dim);
+    text-align: center;
+    margin-top: 16px;
+    line-height: 1.7;
+  }
+
+  .status-msg {
+    display: none;
+    margin-top: 18px;
+    padding: 14px 16px;
+    border-radius: 3px;
+    font-size: 13.5px;
+    line-height: 1.7;
+  }
+  .status-msg.success {
+    display: block;
+    background: rgba(76,122,82,0.15);
+    border: 1px solid rgba(76,122,82,0.4);
+    color: #8FBB94;
+  }
+  .status-msg.error {
+    display: block;
+    background: rgba(192,82,74,0.15);
+    border: 1px solid rgba(192,82,74,0.4);
+    color: #E39A93;
+  }
+
+  .price-tag {
+    text-align: center;
+    margin-bottom: 24px;
+  }
+  .price-tag .price {
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--gold-bright);
+  }
+  .price-tag .desc {
+    font-size: 12.5px;
+    color: var(--paper-dim);
+    margin-top: 4px;
+  }
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <div class="eyebrow">사 주 명 식 해 설</div>
+  <div class="hanja">命</div>
+  <h1>나만의 사주 명식 리포트</h1>
+  <p>태어난 순간의 여덟 글자를 정밀하게 계산하고,<br>AI가 성격·대운·재물·애정·건강까지 풀어드립니다.</p>
+  <div class="oheng-strip">
+    <div class="oheng-dot" style="background:var(--wood)"></div>
+    <div class="oheng-dot" style="background:var(--fire)"></div>
+    <div class="oheng-dot" style="background:var(--earth)"></div>
+    <div class="oheng-dot" style="background:var(--metal)"></div>
+    <div class="oheng-dot" style="background:var(--water)"></div>
+  </div>
+</div>
+
+<div class="container">
+  <div class="card">
+
+    <div class="price-tag">
+      <div class="price">19,900원</div>
+      <div class="desc">PDF 리포트 · 카카오톡 또는 이메일 발송</div>
+    </div>
+
+    <form id="sajuForm">
+      <div class="field">
+        <label>이름</label>
+        <input type="text" name="name" placeholder="홍길동" required>
+      </div>
+
+      <div class="field">
+        <label>연락처 (카카오톡 발송용)</label>
+        <input type="tel" name="phone" placeholder="010-1234-5678" required>
+      </div>
+
+      <div class="field">
+        <label>이메일 (PDF 백업 발송용)</label>
+        <input type="email" name="email" placeholder="example@email.com" required>
+      </div>
+
+      <div class="field">
+        <label>생년월일</label>
+        <input type="date" name="birth_date" required>
+        <div class="hint">양력 기준으로 입력해주세요. (음력 생일은 현재 지원 예정)</div>
+      </div>
+
+      <div class="field">
+        <label>태어난 시간</label>
+        <div class="row2">
+          <div><input type="time" name="birth_time" id="birthTimeInput" required></div>
+        </div>
+        <div class="checkbox-line" style="margin-top:10px;">
+          <input type="checkbox" id="timeUnknown" name="time_unknown">
+          <label for="timeUnknown" style="margin:0; color:var(--paper-dim); font-size:13px;">
+            정확한 시간을 몰라요 (시주는 제외하고 분석합니다)
+          </label>
+        </div>
+      </div>
+
+      <div class="field">
+        <label>성별</label>
+        <div class="radio-group">
+          <div class="radio-option">
+            <input type="radio" name="gender" value="M" id="genderM" required>
+            <label for="genderM">남성</label>
+          </div>
+          <div class="radio-option">
+            <input type="radio" name="gender" value="F" id="genderF">
+            <label for="genderF">여성</label>
+          </div>
+        </div>
+      </div>
+
+      <div class="field">
+        <label>받는 시점</label>
+        <div class="radio-group">
+          <div class="radio-option">
+            <input type="radio" name="delivery_mode" value="immediate" id="deliverNow" checked>
+            <label for="deliverNow">지금 바로</label>
+          </div>
+          <div class="radio-option">
+            <input type="radio" name="delivery_mode" value="scheduled" id="deliverLater">
+            <label for="deliverLater">시간 예약</label>
+          </div>
+        </div>
+
+        <div id="scheduleBlock">
+          <div class="row2" style="margin-top:12px;">
+            <div><input type="date" name="schedule_date" id="scheduleDate"></div>
+            <div><input type="time" name="schedule_time" id="scheduleTime"></div>
+          </div>
+          <div class="hint">한국 시간(KST) 기준으로 그 시각에 카카오톡·이메일이 발송됩니다.</div>
+        </div>
+      </div>
+
+      <button type="submit" class="submit-btn" id="submitBtn">리포트 신청하기</button>
+
+      <div class="disclaimer">
+        본 리포트는 전통 명리학 이론을 바탕으로 한 참고용 콘텐츠이며,<br>
+        의학적·법적·재정적 조언을 대체하지 않습니다.
+      </div>
+
+      <div class="status-msg" id="statusMsg"></div>
+    </form>
+  </div>
+</div>
+
+<script>
+  const deliverLater = document.getElementById('deliverLater');
+  const deliverNow = document.getElementById('deliverNow');
+  const scheduleBlock = document.getElementById('scheduleBlock');
+  const scheduleDate = document.getElementById('scheduleDate');
+  const scheduleTime = document.getElementById('scheduleTime');
+
+  function toggleSchedule() {
+    if (deliverLater.checked) {
+      scheduleBlock.classList.add('show');
+      scheduleDate.required = true;
+      scheduleTime.required = true;
+    } else {
+      scheduleBlock.classList.remove('show');
+      scheduleDate.required = false;
+      scheduleTime.required = false;
+    }
+  }
+  deliverLater.addEventListener('change', toggleSchedule);
+  deliverNow.addEventListener('change', toggleSchedule);
+
+  const timeUnknown = document.getElementById('timeUnknown');
+  const birthTimeInput = document.getElementById('birthTimeInput');
+  timeUnknown.addEventListener('change', () => {
+    if (timeUnknown.checked) {
+      birthTimeInput.required = false;
+      birthTimeInput.disabled = true;
+      birthTimeInput.value = '';
+    } else {
+      birthTimeInput.required = true;
+      birthTimeInput.disabled = false;
+    }
+  });
+
+  // ===== 이 URL을 실제 배포한 서버 주소로 교체하세요 =====
+  const API_ENDPOINT = "https://YOUR_SERVER_DOMAIN/api/submit";
+
+  const form = document.getElementById('sajuForm');
+  const submitBtn = document.getElementById('submitBtn');
+  const statusMsg = document.getElementById('statusMsg');
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    statusMsg.className = 'status-msg';
+    statusMsg.textContent = '';
+
+    const fd = new FormData(form);
+    const payload = Object.fromEntries(fd.entries());
+    payload.time_unknown = !!document.getElementById('timeUnknown').checked;
+
+    submitBtn.disabled = true;
+    submitBtn.textContent = '접수 중...';
+
+    try {
+      const res = await fetch(API_ENDPOINT, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      const data = await res.json();
+
+      if (!res.ok) throw new Error(data.detail || '접수 중 오류가 발생했습니다.');
+
+      statusMsg.className = 'status-msg success';
+      statusMsg.textContent = payload.delivery_mode === 'immediate'
+        ? '접수 완료! 잠시 후 카카오톡과 이메일로 리포트가 도착합니다.'
+        : `접수 완료! 예약하신 시간(${payload.schedule_date} ${payload.schedule_time})에 발송됩니다.`;
+      form.reset();
+      toggleSchedule();
+    } catch (err) {
+      statusMsg.className = 'status-msg error';
+      statusMsg.textContent = '접수에 실패했습니다: ' + err.message;
+    } finally {
+      submitBtn.disabled = false;
+      submitBtn.textContent = '리포트 신청하기';
+    }
+  });
+</script>
+
+</body>
+</html>
