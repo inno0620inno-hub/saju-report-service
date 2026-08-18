@@ -43,7 +43,8 @@ def call_ai_for_section(prompt: str) -> str:
 # ---------------------------------------------------------------------------
 
 def generate_full_report(customer: dict, product_id: str = "full",
-                          sections_override: dict = None, output_dir: str = ".") -> str:
+                          sections_override: dict = None, output_dir: str = ".",
+                          watermark: bool = False) -> str:
     """
     customer: {
         "name", "phone", "email",
@@ -52,6 +53,8 @@ def generate_full_report(customer: dict, product_id: str = "full",
     }
     product_id: report_prompts.PRODUCTS 중 하나의 id (예: "full", "new_year", "love" ...)
     sections_override: 테스트용으로 미리 써둔 해석문을 넣고 싶을 때 사용 (AI 호출 생략)
+    watermark: True면 'SAMPLE · 미리보기' 워터마크가 찍힌 샘플본으로 생성
+               (결제 없이 테스트/미리보기 용도로 보낼 때 사용)
 
     반환값: 생성된 PDF 파일 경로
     """
@@ -72,6 +75,9 @@ def generate_full_report(customer: dict, product_id: str = "full",
 
     # 신년운세/월간운세처럼 '지금 시점' 데이터가 필요한 상품을 위해 미리 계산
     period = calculate_period_pillars()
+    # '향후 5년 흐름' 섹션을 위해, 올해부터 5년치 세운을 미리 계산해둔다
+    current_year = period["year"]
+    period_list = [calculate_period_pillars(current_year + i, 1, 1) for i in range(5)]
 
     # 2) AI 해석문 생성 ---------------------------------------------------
     if sections_override:
@@ -91,6 +97,7 @@ def generate_full_report(customer: dict, product_id: str = "full",
                 profile_kernel=profile_kernel,
                 prior_sections_summary=prior_summary,
                 period=period,
+                period_list=period_list,
             )
             text = call_ai_for_section(prompt)
             sections[key] = text
@@ -98,7 +105,8 @@ def generate_full_report(customer: dict, product_id: str = "full",
 
     # 3) PDF 조립 ---------------------------------------------------------
     safe_name = customer["name"].replace(" ", "_")
-    output_pdf = os.path.join(output_dir, f"saju_report_{safe_name}_{product_id}.pdf")
+    sample_tag = "_SAMPLE" if watermark else ""
+    output_pdf = os.path.join(output_dir, f"saju_report_{safe_name}_{product_id}{sample_tag}.pdf")
 
     birth_info = (
         f"{customer['birth_year']}년 {customer['birth_month']}월 {customer['birth_day']}일 "
@@ -114,6 +122,7 @@ def generate_full_report(customer: dict, product_id: str = "full",
         section_order=section_keys,
         product_name=product["name"],
         output_pdf=output_pdf,
+        watermark=watermark,
     )
 
     return output_pdf
