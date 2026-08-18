@@ -10,11 +10,25 @@ notify.py — 완성된 PDF를 이메일과 카카오 알림톡으로 발송하�
 """
 
 import os
+import socket
 import smtplib
 import requests
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from email.mime.application import MIMEApplication
+
+# ---------------------------------------------------------------------------
+# 일부 호스팅 환경(Railway 등)은 컨테이너에 IPv6 라우팅이 안 되어 있는데,
+# smtplib이 IPv6 주소로 먼저 접속을 시도하다가 "Network is unreachable"
+# 오류가 나는 경우가 있다. 아래는 이 프로세스의 모든 소켓 연결을
+# IPv4로만 하도록 강제하는 처리이다 (이 앱은 IPv6가 딱히 필요하지 않다).
+# ---------------------------------------------------------------------------
+_original_getaddrinfo = socket.getaddrinfo
+
+def _ipv4_only_getaddrinfo(host, port, family=0, type=0, proto=0, flags=0):
+    return _original_getaddrinfo(host, port, socket.AF_INET, type, proto, flags)
+
+socket.getaddrinfo = _ipv4_only_getaddrinfo
 
 # ---------------------------------------------------------------------------
 # 이메일 발송 (완전히 동작하는 코드 — 환경변수만 채우면 됨)
