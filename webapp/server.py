@@ -20,7 +20,7 @@ from datetime import datetime, timedelta
 from dotenv import load_dotenv
 load_dotenv()  # .env 파일이 있으면 환경변수로 불러온다
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, EmailStr, field_validator
@@ -102,7 +102,7 @@ def on_startup():
 
 
 @app.post("/api/submit")
-def submit_order(req: SubmitRequest):
+def submit_order(req: SubmitRequest, background_tasks: BackgroundTasks):
     if not req.time_unknown and not req.birth_time:
         raise HTTPException(400, "태어난 시간을 입력하거나 '모름'을 체크해주세요.")
 
@@ -125,9 +125,11 @@ def submit_order(req: SubmitRequest):
         "delivery_mode": req.delivery_mode, "scheduled_at": scheduled_at,
     })
 
-    # 즉시 발송이면 바로 처리 시도 (실패해도 스케줄러가 재시도하도록 pending 유지 가능)
+    # 즉시 발송이어도, 응답은 바로 주고 실제 처리(AI 호출+PDF+발송)는
+    # 백그라운드에서 진행한다. (AI 6번 호출 + PDF 생성은 1~3분 걸릴 수 있어서,
+    # 화면이 그 시간 내내 응답을 기다리게 하면 안 된다)
     if req.delivery_mode == "immediate":
-        process_order(order_id)
+        background_tasks.add_task(process_order, order_id)
 
     return {"order_id": order_id, "status": "accepted"}
 
