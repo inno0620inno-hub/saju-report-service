@@ -458,6 +458,33 @@ def calculate_daeun(year, month, day, hour, minute, gender, year_gan_index, mont
         "steps": steps,
     }
 
+
+# ---------------------------------------------------------------------------
+# 5-2. 특정 시점(오늘, 올해 등)의 세운(歲運)/월운(月運) 계산
+#      - 개인 생년월일과 무관하게, "지금 이 시점"의 연간지/월간지를 구한다.
+#      - 신년운세, 월간운세 같은 상품에 사용.
+# ---------------------------------------------------------------------------
+
+def calculate_period_pillars(year=None, month=None, day=None):
+    """
+    특정 날짜(기본값: 오늘)의 세운(연간지)과 월운(월간지)을 계산해 반환.
+    시(時)는 의미가 없으므로 정오(12:00) 기준으로 계산한다.
+    """
+    if year is None:
+        today = datetime.now()
+        year, month, day = today.year, today.month, today.day
+
+    y_detail, effective_year = year_pillar(year, month, day, 12, 0)
+    m_detail, term_name = month_pillar(year, month, day, 12, 0, y_detail["index"] % 10)
+
+    return {
+        "year": year, "month": month, "day": day,
+        "se_un": y_detail,       # 세운(歲運) - 올해의 간지
+        "wol_un": m_detail,      # 월운(月運) - 이번 달의 간지
+        "effective_year": effective_year,
+    }
+
+
 def calculate_saju(year, month, day, hour, minute=0, gender=None, apply_dst=True):
     """
     생년월일시(양력, 한국시간 기준)를 입력받아 사주팔자 4주 + 대운을 계산해 반환.
