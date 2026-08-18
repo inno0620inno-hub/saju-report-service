@@ -31,24 +31,30 @@ def _ipv4_only_getaddrinfo(host, port, family=0, type=0, proto=0, flags=0):
 socket.getaddrinfo = _ipv4_only_getaddrinfo
 
 # ---------------------------------------------------------------------------
-# 이메일 발송 (완전히 동작하는 코드 — 환경변수만 채우면 됨)
+# 이메일 발송 (Resend API 사용)
+#
+# 클라우드 서버(Railway 등)에서 Gmail SMTP로 직접 보내면 스팸 정책 때문에
+# 자주 막힌다. Resend 같은 전문 이메일 발송 서비스는 이런 문제가 없다.
+#
+# 주의: 도메인 인증(내 회사 도메인을 Resend에 등록) 전까지는, Resend
+# 무료 계정으로는 "가입할 때 사용한 이메일 주소로만" 발송이 가능하다.
+# 실제 고객들에게 보내려면 Resend 대시보드에서 본인 도메인을 인증해야 한다
+# (도메인이 있어야 함 - 없으면 가비아 등에서 저렴하게 구매 가능).
 # ---------------------------------------------------------------------------
 
-SMTP_HOST = os.environ.get("SMTP_HOST", "smtp.gmail.com")
-SMTP_PORT = int(os.environ.get("SMTP_PORT", "587"))
-SMTP_USER = os.environ.get("SMTP_USER")
-SMTP_PASS = os.environ.get("SMTP_PASS")
+RESEND_API_KEY = os.environ.get("RESEND_API_KEY")
+RESEND_FROM_EMAIL = os.environ.get("RESEND_FROM_EMAIL", "onboarding@resend.dev")
 SENDER_NAME = os.environ.get("SENDER_NAME", "사주 명식 리포트")
 
 
 def send_email_with_pdf(to_email: str, name: str, pdf_path: str):
-    if not SMTP_USER or not SMTP_PASS:
-        raise RuntimeError("SMTP_USER / SMTP_PASS 환경변수가 설정되지 않았습니다.")
+    if not RESEND_API_KEY:
+        raise RuntimeError("RESEND_API_KEY 환경변수가 설정되지 않았습니다.")
 
-    msg = MIMEMultipart()
-    msg["From"] = f"{SENDER_NAME} <{SMTP_USER}>"
-    msg["To"] = to_email
-    msg["Subject"] = f"[사주 명식 리포트] {name}님의 리포트가 도착했습니다"
+    import base64
+
+    with open(pdf_path, "rb") as f:
+        pdf_base64 = base64.b64encode(f.read()).decode("utf-8")
 
     body = f"""{name}님, 안녕하세요.
 
@@ -57,17 +63,32 @@ PDF 파일을 열어 확인해주세요.
 
 감사합니다.
 """
-    msg.attach(MIMEText(body, "plain", "utf-8"))
 
-    with open(pdf_path, "rb") as f:
-        part = MIMEApplication(f.read(), Name=os.path.basename(pdf_path))
-    part["Content-Disposition"] = f'attachment; filename="{os.path.basename(pdf_path)}"'
-    msg.attach(part)
+    payload = {
+        "from": f"{SENDER_NAME} <{RESEND_FROM_EMAIL}>",
+        "to": [to_email],
+        "subject": f"[사주 명식 리포트] {name}님의 리포트가 도착했습니다",
+        "text": body,
+        "attachments": [
+            {
+                "filename": os.path.basename(pdf_path),
+                "content": pdf_base64,
+            }
+        ],
+    }
 
-    with smtplib.SMTP(SMTP_HOST, SMTP_PORT) as server:
-        server.starttls()
-        server.login(SMTP_USER, SMTP_PASS)
-        server.send_message(msg)
+    resp = requests.post(
+        "https://api.resend.com/emails",
+        headers={
+            "Authorization": f"Bearer {RESEND_API_KEY}",
+            "Content-Type": "application/json",
+        },
+        json=payload,
+        timeout=30,
+    )
+    if resp.status_code >= 400:
+        raise RuntimeError(f"Resend 발송 실패 ({resp.status_code}): {resp.text}")
+    return resp.json()
 
 
 # ---------------------------------------------------------------------------
