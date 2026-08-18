@@ -3,6 +3,9 @@
 
 FROM python:3.12-slim
 
+# 로그가 버퍼에 갇히지 않고 실시간으로 바로 출력되도록 설정
+ENV PYTHONUNBUFFERED=1
+
 # PDF 생성에 필요한 프로그램(wkhtmltopdf)과 한글 폰트를 설치
 # (wkhtmltopdf는 기본 저장소에 없어서 공식 배포 파일을 직접 받아 설치합니다)
 RUN apt-get update && apt-get install -y \
