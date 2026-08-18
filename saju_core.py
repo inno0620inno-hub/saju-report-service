@@ -460,6 +460,67 @@ def calculate_daeun(year, month, day, hour, minute, gender, year_gan_index, mont
 
 
 # ---------------------------------------------------------------------------
+# 5-3. 십신(十神) 계산 — 일간(본인)을 기준으로 다른 천간들이 어떤 관계인지
+#      (비견/겁재/식신/상관/편재/정재/편관/정관/편인/정인)
+# ---------------------------------------------------------------------------
+
+_OHENG_ORDER = ["목", "화", "토", "금", "수"]
+
+def _generates(elem):
+    """elem이 상생(相生)으로 낳아주는 다음 오행 (목생화, 화생토, 토생금, 금생수, 수생목)"""
+    i = _OHENG_ORDER.index(elem)
+    return _OHENG_ORDER[(i + 1) % 5]
+
+def _overcomes(elem):
+    """elem이 상극(相剋)으로 극하는 오행 (목극토, 화극금, 토극수, 금극목, 수극화)"""
+    i = _OHENG_ORDER.index(elem)
+    return _OHENG_ORDER[(i + 2) % 5]
+
+def sipsin_between(day_gan_index, other_gan_index):
+    """일간(day_gan_index) 기준으로 other_gan_index 천간의 십신을 반환."""
+    day_elem = CHEONGAN_OHENG[day_gan_index % 10]
+    day_yy = CHEONGAN_UMYANG[day_gan_index % 10]
+    other_elem = CHEONGAN_OHENG[other_gan_index % 10]
+    other_yy = CHEONGAN_UMYANG[other_gan_index % 10]
+    same_yy = (day_yy == other_yy)
+
+    if other_elem == day_elem:
+        return "비견" if same_yy else "겁재"
+    elif _generates(day_elem) == other_elem:
+        return "식신" if same_yy else "상관"
+    elif _overcomes(day_elem) == other_elem:
+        return "편재" if same_yy else "정재"
+    elif _overcomes(other_elem) == day_elem:
+        return "편관" if same_yy else "정관"
+    elif _generates(other_elem) == day_elem:
+        return "편인" if same_yy else "정인"
+    return None  # 이론상 도달 불가
+
+SIPSIN_MEANING = {
+    "비견": "자기 자신과 같은 힘 - 독립심, 자존심, 동료·경쟁자",
+    "겁재": "자신과 비슷하나 다른 결의 힘 - 추진력, 손재 위험, 형제·동업자",
+    "식신": "내가 낳는 부드러운 힘 - 표현력, 여유, 의식주 복",
+    "상관": "내가 낳는 날카로운 힘 - 재능, 비판력, 규범을 벗어나려는 기질",
+    "편재": "내가 다스리는 유동적인 재물 - 활동을 통한 재물, 사업 수완",
+    "정재": "내가 다스리는 안정적인 재물 - 착실한 축적, 배우자운(남성 기준)",
+    "편관": "나를 억누르는 강한 힘 - 추진력, 위기 대응력, 스트레스",
+    "정관": "나를 다스리는 질서 - 책임감, 명예, 조직 적응력",
+    "편인": "나를 낳아주는 특이한 힘 - 직관, 종교·철학적 관심, 변칙적 학습",
+    "정인": "나를 낳아주는 순정한 힘 - 학문, 보호받는 기운, 어머니운",
+}
+
+def calculate_sipsin(data):
+    """계산된 사주 데이터(연/월/일/시주)를 받아 연간·월간·시간의 십신을 반환."""
+    day_gan_idx = data["day_pillar"]["index"] % 10
+    result = {}
+    for key, label in [("year_pillar", "년간"), ("month_pillar", "월간"), ("hour_pillar", "시간")]:
+        other_idx = data[key]["index"] % 10
+        sipsin = sipsin_between(day_gan_idx, other_idx)
+        result[key] = {"label": label, "sipsin": sipsin, "meaning": SIPSIN_MEANING.get(sipsin, "")}
+    return result
+
+
+# ---------------------------------------------------------------------------
 # 5-2. 특정 시점(오늘, 올해 등)의 세운(歲運)/월운(月運) 계산
 #      - 개인 생년월일과 무관하게, "지금 이 시점"의 연간지/월간지를 구한다.
 #      - 신년운세, 월간운세 같은 상품에 사용.
@@ -525,6 +586,7 @@ def calculate_saju(year, month, day, hour, minute=0, gender=None, apply_dst=True
         "day_master": d_detail["gan"],  # 일간(日干) = 본인을 상징하는 핵심 글자
         "summary_string": f"{y_detail['str']}년 {m_detail['str']}월 {d_detail['str']}일 {h_detail['str']}시",
     }
+    result["sipsin"] = calculate_sipsin(result)
 
     if gender in ("M", "F"):
         result["daeun"] = calculate_daeun(
