@@ -20,7 +20,7 @@ from datetime import datetime, timedelta
 from dotenv import load_dotenv
 load_dotenv()  # .env 파일이 있으면 환경변수로 불러온다
 
-from fastapi import FastAPI, HTTPException, BackgroundTasks, Depends
+from fastapi import FastAPI, HTTPException, BackgroundTasks, Depends, Form
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from fastapi.responses import HTMLResponse
 from fastapi.middleware.cors import CORSMiddleware
@@ -204,14 +204,25 @@ def admin_page(username: str = Depends(verify_admin)):
           </td>
         </tr>"""
 
+    products_options = "\n".join(
+        f'<option value="{p["id"]}">{p["name"]} ({p["price"]:,}원)</option>' for p in PRODUCTS
+    )
+
     return f"""
     <html><head><meta charset="utf-8"><title>입금 확인 관리자 페이지</title>
     <style>
       body {{ font-family: -apple-system, sans-serif; background:#16140F; color:#F3EDE0; padding:30px; }}
       h1 {{ color:#D4AF5A; }}
+      h2 {{ color:#D4AF5A; font-size:18px; margin-top:50px; }}
       table {{ width:100%; border-collapse: collapse; margin-top:20px; }}
       th, td {{ padding:10px 12px; border-bottom:1px solid #333; text-align:left; font-size:14px; }}
       th {{ color:#D4AF5A; }}
+      .test-form {{ background:#201D17; border:1px solid rgba(184,146,63,0.3); border-radius:6px; padding:24px; margin-top:16px; max-width:520px; }}
+      .test-form label {{ display:block; font-size:12.5px; color:#D4AF5A; margin-bottom:5px; margin-top:14px; }}
+      .test-form input, .test-form select {{ width:100%; padding:9px 10px; background:#16140F; border:1px solid #444; border-radius:4px; color:#F3EDE0; font-size:14px; box-sizing:border-box; }}
+      .test-form button {{ margin-top:20px; background:#B8923F; color:#16140F; border:none; padding:10px 18px; border-radius:4px; font-weight:700; cursor:pointer; }}
+      .row2 {{ display:flex; gap:10px; }}
+      .row2 > div {{ flex:1; }}
     </style>
     </head><body>
       <h1>입금 확인 대기 목록</h1>
@@ -221,6 +232,26 @@ def admin_page(username: str = Depends(verify_admin)):
         <tr><th>ID</th><th>이름</th><th>연락처</th><th>상품</th><th>금액</th><th>신청시각</th><th>액션</th></tr>
         {rows_html}
       </table>
+
+      <h2>테스트 발송 (결제 없이, 워터마크 찍힌 샘플본)</h2>
+      <p style="color:#999; font-size:13px;">여기서 보내는 리포트는 입금 확인 절차 없이 바로 생성되고, 모든 페이지에
+      'SAMPLE · 미리보기' 워터마크가 찍혀요. 실제 판매용 리포트와 절대 헷갈리지 않습니다. 신청 내역(주문 목록)에도
+      남지 않아요 — 순수하게 테스트/샘플 발송 전용입니다.</p>
+      <form method="post" action="/admin/test-send" class="test-form">
+        <label>이름</label>
+        <input type="text" name="name" value="테스트" required>
+        <div class="row2">
+          <div><label>생년월일</label><input type="date" name="birth_date" required></div>
+          <div><label>태어난 시간</label><input type="time" name="birth_time" value="12:00" required></div>
+        </div>
+        <label>성별</label>
+        <select name="gender"><option value="M">남성</option><option value="F">여성</option></select>
+        <label>상품</label>
+        <select name="product_id">{products_options}</select>
+        <label>받을 이메일</label>
+        <input type="email" name="email" required>
+        <button type="submit">샘플 리포트 생성·발송</button>
+      </form>
     </body></html>
     """
 
@@ -239,6 +270,47 @@ def admin_confirm_payment(order_id: int, background_tasks: BackgroundTasks,
         background_tasks.add_task(process_order, order_id)
 
     return HTMLResponse('<script>alert("입금확인 처리되었습니다."); window.location.href="/admin";</script>')
+
+
+@app.post("/admin/test-send")
+def admin_test_send(
+    background_tasks: BackgroundTasks,
+    username: str = Depends(verify_admin),
+    name: str = Form(...),
+    birth_date: str = Form(...),
+    birth_time: str = Form(...),
+    gender: str = Form(...),
+    product_id: str = Form(...),
+    email: str = Form(...),
+):
+    """
+    결제/DB 주문 절차를 건너뛰고, 워터마크 찍힌 샘플 리포트를 바로 생성해서
+    지정한 이메일로 보낸다. 관리자 본인 테스트 또는 잠재 고객에게 미리보기를
+    보여줄 때 사용.
+    """
+    y, m, d = birth_date.split("-")
+    hh, mm = birth_time.split(":")
+    customer = {
+        "name": name, "phone": "000-0000-0000", "email": email,
+        "birth_year": int(y), "birth_month": int(m), "birth_day": int(d),
+        "birth_hour": int(hh), "birth_minute": int(mm), "gender": gender,
+    }
+
+    def _run():
+        try:
+            pdf_path = generate_full_report(customer, product_id=product_id,
+                                             output_dir=OUTPUT_DIR, watermark=True)
+            send_email_with_pdf(email, name, pdf_path)
+            print(f"[테스트발송] {name} / {product_id} -> {email} 완료")
+        except Exception as e:
+            print(f"[테스트발송] 실패: {e}")
+
+    background_tasks.add_task(_run)
+
+    return HTMLResponse(
+        '<script>alert("샘플 리포트 생성을 시작했습니다. 1~2분 후 이메일을 확인해주세요."); '
+        'window.location.href="/admin";</script>'
+    )
 
 
 # ---------------------------------------------------------------------------
