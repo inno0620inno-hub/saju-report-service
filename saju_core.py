@@ -521,6 +521,34 @@ def calculate_sipsin(data):
 
 
 # ---------------------------------------------------------------------------
+# 5-1-2. 천을귀인(天乙貴人) 계산 — 신살(神殺) 중 가장 널리 쓰이는 길신(吉神).
+#      일간을 기준으로 정해진 두 지지가 사주 안에 있는지 확인하는, 고정된
+#      공식이라 AI가 아니라 코드로 정확하게 계산한다.
+# ---------------------------------------------------------------------------
+
+# 일간별 천을귀인 지지 (전통 명리학 표준 공식)
+CHEON_EUL_GWIIN_TABLE = {
+    "갑": ["축", "미"], "무": ["축", "미"], "경": ["축", "미"],
+    "을": ["자", "신"], "기": ["자", "신"],
+    "병": ["해", "유"], "정": ["해", "유"],
+    "임": ["묘", "사"], "계": ["묘", "사"],
+    "신": ["인", "오"],
+}
+
+def calculate_cheoneulgwiin(data):
+    """일간 기준 천을귀인에 해당하는 지지가 연/월/일/시지 중에 있는지 확인."""
+    day_gan = data["day_pillar"]["gan"]
+    target_jiji = CHEON_EUL_GWIIN_TABLE.get(day_gan, [])
+    found = []
+    for key, label in [("year_pillar", "년지"), ("month_pillar", "월지"),
+                        ("day_pillar", "일지"), ("hour_pillar", "시지")]:
+        ji = data[key]["ji"]
+        if ji in target_jiji:
+            found.append({"pillar": label, "jiji": ji})
+    return {"target_jiji": target_jiji, "found": found, "has_gwiin": len(found) > 0}
+
+
+# ---------------------------------------------------------------------------
 # 5-2. 특정 시점(오늘, 올해 등)의 세운(歲運)/월운(月運) 계산
 #      - 개인 생년월일과 무관하게, "지금 이 시점"의 연간지/월간지를 구한다.
 #      - 신년운세, 월간운세 같은 상품에 사용.
@@ -544,6 +572,11 @@ def calculate_period_pillars(year=None, month=None, day=None):
         "wol_un": m_detail,      # 월운(月運) - 이번 달의 간지
         "effective_year": effective_year,
     }
+
+
+def calculate_year_all_months(year):
+    """해당 연도 1~12월 전체의 월운(月運)을 리스트로 반환 (각 달 15일 기준으로 계산)."""
+    return [calculate_period_pillars(year, m, 15) for m in range(1, 13)]
 
 
 def calculate_saju(year, month, day, hour, minute=0, gender=None, apply_dst=True):
@@ -587,6 +620,7 @@ def calculate_saju(year, month, day, hour, minute=0, gender=None, apply_dst=True
         "summary_string": f"{y_detail['str']}년 {m_detail['str']}월 {d_detail['str']}일 {h_detail['str']}시",
     }
     result["sipsin"] = calculate_sipsin(result)
+    result["cheoneulgwiin"] = calculate_cheoneulgwiin(result)
 
     if gender in ("M", "F"):
         result["daeun"] = calculate_daeun(
