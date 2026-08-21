@@ -17,7 +17,8 @@ SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 
 OHENG_COLOR_VAR = {"목": "wood", "화": "fire", "토": "earth", "금": "metal", "수": "water"}
 HANJA_NUMERALS = ["一", "二", "三", "四", "五", "六", "七", "八", "九", "十",
-                   "十一", "十二", "十三", "十四", "十五", "十六", "十七", "十八", "十九", "二十"]
+                   "十一", "十二", "十三", "十四", "十五", "十六", "十七", "十八", "十九", "二十",
+                   "二十一", "二十二", "二十三", "二十四", "二十五", "二十六", "二十七", "二十八", "二十九", "三十"]
 
 
 def render_pillar_cards(data):
@@ -137,12 +138,17 @@ def _render_section_page(section_key, data, section_text, chapter_num_str, page_
 </div>"""
 
 
+def _chapter_mark(i):
+    """섹션 인덱스(0부터)를 챕터 표기로 변환. 한자 20개를 넘으면 숫자로 대체."""
+    return HANJA_NUMERALS[i] if i < len(HANJA_NUMERALS) else str(i + 1)
+
+
 def _render_toc_page(section_keys, page_num):
     items = []
     items.append(('一', "사주 원국 · 오행 분포", 3))
     page = 4
     for i, key in enumerate(section_keys):
-        items.append((HANJA_NUMERALS[i + 1], SECTION_SPECS[key]["title"], page))
+        items.append((_chapter_mark(i + 1), SECTION_SPECS[key]["title"], page))
         page += 1
 
     rows = "\n".join(
@@ -186,7 +192,7 @@ def build_report(data, name, birth_info, sections, section_order=None,
 
     page_num = 4
     for i, key in enumerate(section_order):
-        chapter_num_str = HANJA_NUMERALS[i + 1] if (i + 1) < len(HANJA_NUMERALS) else str(i + 2)
+        chapter_num_str = _chapter_mark(i + 1)
         body_parts.append(_render_section_page(key, data, sections[key], chapter_num_str, page_num))
         page_num += 1
 
