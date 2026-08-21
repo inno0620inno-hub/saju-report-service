@@ -29,7 +29,7 @@ def call_ai_for_section(prompt: str) -> str:
             "https://console.anthropic.com 에서 API 키를 발급받아 설정하세요."
         )
 
-    client = anthropic.Anthropic(api_key=api_key)
+    client = anthropic.Anthropic(api_key=api_key, timeout=60.0)
     response = client.messages.create(
         model="claude-sonnet-4-6",
         max_tokens=1500,
@@ -92,13 +92,16 @@ def generate_full_report(customer: dict, product_id: str = "full",
         # 2-2) 상품에 포함된 섹션만 순서대로 생성 (일관성 유지 로직 포함)
         sections = {}
         written_so_far = []
-        for key in section_keys:
+        total = len(section_keys)
+        for i, key in enumerate(section_keys, 1):
             spec = SECTION_SPECS[key]
             if spec.get("is_static"):
                 # 용어해설처럼 고정된 설명은 AI 호출 없이 그대로 사용 (정확성 + 비용 절감)
                 sections[key] = spec["static_content"]
+                print(f"  ({i}/{total}) {key} - 고정 텍스트 사용")
                 continue
 
+            print(f"  ({i}/{total}) {key} 섹션 생성 중...")
             prior_summary = "\n".join(written_so_far) if written_so_far else None
             prompt = build_section_prompt(
                 key, data,
@@ -111,6 +114,7 @@ def generate_full_report(customer: dict, product_id: str = "full",
             text = call_ai_for_section(prompt)
             sections[key] = text
             written_so_far.append(f"[{key}] {text[:120]}...")
+            print(f"  ({i}/{total}) {key} 완료")
 
     # 3) PDF 조립 ---------------------------------------------------------
     safe_name = customer["name"].replace(" ", "_")
