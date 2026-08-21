@@ -8,9 +8,9 @@ generate_report.py
 """
 
 import os
-from saju_core import calculate_saju, calculate_period_pillars
+from saju_core import calculate_saju, calculate_period_pillars, calculate_year_all_months
 from report_prompts import (
-    build_section_prompt, build_profile_kernel_prompt, PRODUCTS_BY_ID
+    build_section_prompt, build_profile_kernel_prompt, PRODUCTS_BY_ID, SECTION_SPECS
 )
 from build_report import build_report
 
@@ -78,6 +78,8 @@ def generate_full_report(customer: dict, product_id: str = "full",
     # '향후 5년 흐름' 섹션을 위해, 올해부터 5년치 세운을 미리 계산해둔다
     current_year = period["year"]
     period_list = [calculate_period_pillars(current_year + i, 1, 1) for i in range(5)]
+    # '달마다 보는 올해 흐름' 섹션을 위해, 올해 1~12월 전체 월운을 미리 계산해둔다
+    months_data = calculate_year_all_months(current_year)
 
     # 2) AI 해석문 생성 ---------------------------------------------------
     if sections_override:
@@ -91,6 +93,12 @@ def generate_full_report(customer: dict, product_id: str = "full",
         sections = {}
         written_so_far = []
         for key in section_keys:
+            spec = SECTION_SPECS[key]
+            if spec.get("is_static"):
+                # 용어해설처럼 고정된 설명은 AI 호출 없이 그대로 사용 (정확성 + 비용 절감)
+                sections[key] = spec["static_content"]
+                continue
+
             prior_summary = "\n".join(written_so_far) if written_so_far else None
             prompt = build_section_prompt(
                 key, data,
@@ -98,6 +106,7 @@ def generate_full_report(customer: dict, product_id: str = "full",
                 prior_sections_summary=prior_summary,
                 period=period,
                 period_list=period_list,
+                months_data=months_data,
             )
             text = call_ai_for_section(prompt)
             sections[key] = text
