@@ -30,10 +30,12 @@ def call_ai_for_section(prompt: str) -> str:
             "https://console.anthropic.com 에서 API 키를 발급받아 설정하세요."
         )
 
-    client = anthropic.Anthropic(api_key=api_key, timeout=60.0)
+    # report_prompts.py의 섹션별 분량 지시 중 가장 긴 것(성격/대운흐름/십신/사업운 등 3000~3200자)도
+    # 잘리지 않도록 넉넉하게 잡는다. 출력이 길어질 수 있으므로 timeout도 함께 늘린다.
+    client = anthropic.Anthropic(api_key=api_key, timeout=180.0)
     response = client.messages.create(
         model="claude-sonnet-4-6",
-        max_tokens=1500,
+        max_tokens=8000,
         messages=[{"role": "user", "content": prompt}],
     )
     return response.content[0].text
