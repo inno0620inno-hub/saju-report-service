@@ -1,0 +1,7 @@
+.env
+__pycache__/
+*.pyc
+orders.db
+webapp/orders.db
+generated_reports/
+webapp/generated_reports/
