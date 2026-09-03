@@ -217,18 +217,25 @@ def build_report(data, name, birth_info, sections, section_order=None,
     for k, v in replacements.items():
         html = html.replace(k, v)
 
-    html_path = os.path.join(SCRIPT_DIR, "report_assets", "_rendered.html")
+    # output_pdf(주문별로 고유)를 기반으로 중간 HTML 파일명도 고유하게 만든다.
+    # 고정된 파일명을 쓰면 여러 주문이 동시에 처리될 때 서로의 중간 HTML을
+    # 덮어써서 엉뚱한 내용의 PDF가 만들어질 수 있다.
+    pdf_stem = os.path.splitext(os.path.basename(output_pdf))[0]
+    html_path = os.path.join(SCRIPT_DIR, "report_assets", f"_rendered_{pdf_stem}.html")
     with open(html_path, "w", encoding="utf-8") as f:
         f.write(html)
 
-    subprocess.run(
-        ["wkhtmltopdf", "--encoding", "utf-8", "--enable-local-file-access",
-         "--page-size", "A4",
-         "--margin-top", "0", "--margin-bottom", "0",
-         "--margin-left", "0", "--margin-right", "0",
-         "-q", html_path, output_pdf],
-        check=True
-    )
+    try:
+        subprocess.run(
+            ["wkhtmltopdf", "--encoding", "utf-8", "--enable-local-file-access",
+             "--page-size", "A4",
+             "--margin-top", "0", "--margin-bottom", "0",
+             "--margin-left", "0", "--margin-right", "0",
+             "-q", html_path, output_pdf],
+            check=True
+        )
+    finally:
+        os.remove(html_path)
     print(f"완성: {output_pdf}")
 
 

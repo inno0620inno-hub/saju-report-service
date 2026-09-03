@@ -339,7 +339,8 @@ def process_order(order_id: int):
         }
 
         print(f"[주문 {order_id}] 사주 계산 + AI 해석문 생성 시작 (1~2분 소요)...")
-        pdf_path = generate_full_report(customer, product_id=order["product_id"], output_dir=OUTPUT_DIR)
+        pdf_path = generate_full_report(customer, product_id=order["product_id"], output_dir=OUTPUT_DIR,
+                                         order_id=order_id)
         print(f"[주문 {order_id}] PDF 생성 완료: {pdf_path}")
 
         # 카카오 알림톡 발송 (실패해도 이메일은 계속 시도)

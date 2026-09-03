@@ -8,6 +8,7 @@ generate_report.py
 """
 
 import os
+import uuid
 from saju_core import calculate_saju, calculate_period_pillars, calculate_year_all_months
 from report_prompts import (
     build_section_prompt, build_profile_kernel_prompt, PRODUCTS_BY_ID, SECTION_SPECS
@@ -44,7 +45,7 @@ def call_ai_for_section(prompt: str) -> str:
 
 def generate_full_report(customer: dict, product_id: str = "full",
                           sections_override: dict = None, output_dir: str = ".",
-                          watermark: bool = False) -> str:
+                          watermark: bool = False, order_id=None) -> str:
     """
     customer: {
         "name", "phone", "email",
@@ -55,6 +56,8 @@ def generate_full_report(customer: dict, product_id: str = "full",
     sections_override: 테스트용으로 미리 써둔 해석문을 넣고 싶을 때 사용 (AI 호출 생략)
     watermark: True면 'SAMPLE · 미리보기' 워터마크가 찍힌 샘플본으로 생성
                (결제 없이 테스트/미리보기 용도로 보낼 때 사용)
+    order_id: 파일명을 동명이인/동시처리 주문끼리도 겹치지 않게 만들기 위한 고유값.
+              없으면(테스트 발송 등) 임의의 고유값을 대신 생성한다.
 
     반환값: 생성된 PDF 파일 경로
     """
@@ -117,9 +120,12 @@ def generate_full_report(customer: dict, product_id: str = "full",
             print(f"  ({i}/{total}) {key} 완료")
 
     # 3) PDF 조립 ---------------------------------------------------------
+    # order_id(또는 임의의 고유값)를 파일명에 넣어, 동명이인이거나 여러 주문이
+    # 동시에 처리될 때 서로 다른 고객의 PDF 파일이 같은 경로로 덮어써지는 것을 방지한다.
     safe_name = customer["name"].replace(" ", "_")
     sample_tag = "_SAMPLE" if watermark else ""
-    output_pdf = os.path.join(output_dir, f"saju_report_{safe_name}_{product_id}{sample_tag}.pdf")
+    unique_id = str(order_id) if order_id is not None else uuid.uuid4().hex[:8]
+    output_pdf = os.path.join(output_dir, f"saju_report_{unique_id}_{safe_name}_{product_id}{sample_tag}.pdf")
 
     birth_info = (
         f"{customer['birth_year']}년 {customer['birth_month']}월 {customer['birth_day']}일 "
