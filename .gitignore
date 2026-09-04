@@ -6,3 +6,4 @@ webapp/orders.db
 generated_reports/
 webapp/generated_reports/
 report_assets/_rendered*.html
+*.log
