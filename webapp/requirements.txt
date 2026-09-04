@@ -7,3 +7,6 @@ requests>=2.31
 python-dotenv>=1.0
 anthropic>=0.40
 python-multipart>=0.0.9
+
+# test_e2e.py 전용 (서버 운영에는 불필요)
+pdfplumber>=0.11
