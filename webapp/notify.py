@@ -108,6 +108,35 @@ PDF 파일을 열어 확인해주세요.
 # '대체발송' 옵션도 대행사 API가 보통 지원한다.
 # ---------------------------------------------------------------------------
 
+TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN")
+TELEGRAM_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID")
+
+
+def send_telegram_message(text: str):
+    """관리자(나)에게 텔레그램으로 알림을 보낸다.
+
+    TELEGRAM_BOT_TOKEN / TELEGRAM_CHAT_ID 환경변수가 설정되어 있어야 하고,
+    받는 사람이 미리 해당 봇과 대화를 한 번 시작(/start)한 상태여야 한다.
+    실패해도 서비스 본 동작(신청 접수 등)을 막으면 안 되므로 예외를 던지지
+    않고 (성공여부, 에러메시지) 튜플을 돌려준다 — 호출부에서 로그만 남기면 된다.
+    """
+    if not (TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID):
+        return False, "TELEGRAM_BOT_TOKEN / TELEGRAM_CHAT_ID 환경변수가 설정되지 않았습니다."
+
+    url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
+    try:
+        resp = requests.post(
+            url,
+            json={"chat_id": TELEGRAM_CHAT_ID, "text": text},
+            timeout=10,
+        )
+        if resp.status_code >= 400:
+            return False, f"텔레그램 발송 실패 ({resp.status_code}): {resp.text}"
+        return True, None
+    except Exception as e:  # 네트워크 오류 등
+        return False, f"텔레그램 발송 중 예외 발생: {e}"
+
+
 SOLAPI_API_KEY = os.environ.get("SOLAPI_API_KEY")
 SOLAPI_API_SECRET = os.environ.get("SOLAPI_API_SECRET")
 KAKAO_SENDER_KEY = os.environ.get("KAKAO_SENDER_KEY")  # 카카오 발신프로필 키
