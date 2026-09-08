@@ -216,9 +216,12 @@ def admin_page(username: str = Depends(verify_admin)):
           <td>{product.get('name', o['product_id'])}</td>
           <td>{o['price']:,}원</td>
           <td>{o['created_at'][:16].replace('T',' ')}</td>
-          <td>
-            <form method="post" action="/admin/confirm/{o['id']}" onsubmit="return confirm('입금을 확인하셨습니까? {o['name']}님 / {o['price']:,}원');">
+          <td style="white-space:nowrap;">
+            <form method="post" action="/admin/confirm/{o['id']}" style="display:inline-block;" onsubmit="return confirm('입금을 확인하셨습니까? {o['name']}님 / {o['price']:,}원');">
               <button type="submit" style="background:#B8923F; color:#16140F; border:none; padding:8px 14px; border-radius:4px; font-weight:700; cursor:pointer;">입금확인</button>
+            </form>
+            <form method="post" action="/admin/cancel/{o['id']}" style="display:inline-block; margin-left:6px;" onsubmit="return confirm('이 신청을 취소/삭제하시겠습니까? {o['name']}님 / {o['price']:,}원\\n(거래 불발 등으로 목록에서 제거합니다)');">
+              <button type="submit" style="background:transparent; color:#D96C6C; border:1px solid #D96C6C; padding:8px 14px; border-radius:4px; font-weight:700; cursor:pointer;">취소/삭제</button>
             </form>
           </td>
         </tr>"""
@@ -289,6 +292,17 @@ def admin_confirm_payment(order_id: int, background_tasks: BackgroundTasks,
         background_tasks.add_task(process_order, order_id)
 
     return HTMLResponse('<script>alert("입금확인 처리되었습니다."); window.location.href="/admin";</script>')
+
+
+@app.post("/admin/cancel/{order_id}")
+def admin_cancel_order(order_id: int, username: str = Depends(verify_admin)):
+    order = db.get_order(order_id)
+    if not order or order["status"] != "awaiting_payment":
+        raise HTTPException(404, "입금 대기 중인 주문이 아닙니다.")
+
+    db.cancel_order(order_id)
+
+    return HTMLResponse('<script>alert("신청이 취소/삭제되었습니다."); window.location.href="/admin";</script>')
 
 
 @app.post("/admin/test-send")
