@@ -30,7 +30,7 @@ from apscheduler.schedulers.background import BackgroundScheduler
 import secrets
 
 import db
-from notify import send_email_with_pdf, send_kakao_alimtalk
+from notify import send_email_with_pdf, send_kakao_alimtalk, send_telegram_message
 
 # saju_core.py, generate_report.py 등이 있는 상위 폴더를 import 경로에 추가
 sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
@@ -137,6 +137,23 @@ def on_startup():
     scheduler.start()
 
 
+def _notify_admin_new_order(order_id: int, req: "SubmitRequest"):
+    """신규 신청이 들어오면 관리자에게 텔레그램으로 알림을 보낸다."""
+    product_name = PRODUCTS_BY_ID.get(req.product_id, {}).get("name", req.product_id)
+    price = PRODUCTS_BY_ID.get(req.product_id, {}).get("price", 0)
+    text = (
+        f"[금빛 사주명식] 새 신청 접수\n"
+        f"주문번호: {order_id}\n"
+        f"이름: {req.name}\n"
+        f"연락처: {req.phone}\n"
+        f"상품: {product_name} ({price:,}원)\n"
+        f"관리자 페이지에서 입금 확인 후 처리해주세요."
+    )
+    ok, err = send_telegram_message(text)
+    if not ok:
+        print(f"[telegram] 신규 신청 알림 발송 실패 (order_id={order_id}): {err}")
+
+
 @app.post("/api/submit")
 def submit_order(req: SubmitRequest, background_tasks: BackgroundTasks):
     if not req.time_unknown and not req.birth_time:
@@ -164,6 +181,8 @@ def submit_order(req: SubmitRequest, background_tasks: BackgroundTasks):
 
     # 이제 신청만으로는 처리를 시작하지 않는다. 관리자가 입금을 확인하고
     # /admin 페이지에서 '입금확인' 버튼을 눌러야 그때부터 처리가 시작된다.
+
+    background_tasks.add_task(_notify_admin_new_order, order_id, req)
 
     return {"order_id": order_id, "status": "awaiting_payment"}
 
