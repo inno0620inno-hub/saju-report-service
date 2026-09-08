@@ -91,6 +91,21 @@ def confirm_payment(order_id: int):
         conn.commit()
 
 
+def cancel_order(order_id: int):
+    """
+    관리자가 '취소/삭제' 버튼을 눌렀을 때 호출 — 거래가 불발되었거나
+    (입금 안 함, 고객 변심 등) 잘못 들어온 신청을 목록에서 치운다.
+    실제로 행을 지우지는 않고 status만 'cancelled'로 바꿔서 기록은 남긴다.
+    입금확인 전(awaiting_payment) 상태일 때만 취소할 수 있다.
+    """
+    with get_conn() as conn:
+        conn.execute("""
+            UPDATE orders SET status='cancelled', processed_at=?
+            WHERE id=? AND status='awaiting_payment'
+        """, (datetime.utcnow().isoformat(), order_id))
+        conn.commit()
+
+
 def get_due_orders(now_iso: str):
     """지금 처리해야 할 주문들 (즉시 발송 대기중이거나, 예약시간이 지난 것)."""
     with get_conn() as conn:

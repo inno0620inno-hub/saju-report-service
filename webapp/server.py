@@ -30,7 +30,7 @@ from apscheduler.schedulers.background import BackgroundScheduler
 import secrets
 
 import db
-from notify import send_email_with_pdf, send_kakao_alimtalk, send_telegram_order_notification
+from notify import send_email_with_pdf, send_kakao_alimtalk, send_telegram_message
 
 # saju_core.py, generate_report.py 등이 있는 상위 폴더를 import 경로에 추가
 sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
@@ -137,6 +137,25 @@ def on_startup():
     scheduler.start()
 
 
+def _notify_admin_new_order(order_id: int, req: "SubmitRequest"):
+    """신규 신청이 들어오면 관리자에게 텔레그램으로 알림을 보낸다."""
+    product_name = PRODUCTS_BY_ID.get(req.product_id, {}).get("name", req.product_id)
+    price = PRODUCTS_BY_ID.get(req.product_id, {}).get("price", 0)
+    birth_datetime = f"{req.birth_date} {req.birth_time or '시간 모름'}"
+    text = (
+        f"[금빛 사주명식] 새 신청 접수\n"
+        f"주문번호: {order_id}\n"
+        f"이름: {req.name}\n"
+        f"연락처: {req.phone}\n"
+        f"상품: {product_name} ({price:,}원)\n"
+        f"생년월일시: {birth_datetime}\n"
+        f"관리자 페이지에서 입금 확인 후 처리해주세요."
+    )
+    ok, err = send_telegram_message(text)
+    if not ok:
+        print(f"[telegram] 신규 신청 알림 발송 실패 (order_id={order_id}): {err}")
+
+
 @app.post("/api/submit")
 def submit_order(req: SubmitRequest, background_tasks: BackgroundTasks):
     if not req.time_unknown and not req.birth_time:
@@ -165,16 +184,7 @@ def submit_order(req: SubmitRequest, background_tasks: BackgroundTasks):
     # 이제 신청만으로는 처리를 시작하지 않는다. 관리자가 입금을 확인하고
     # /admin 페이지에서 '입금확인' 버튼을 눌러야 그때부터 처리가 시작된다.
 
-    try:
-        send_telegram_order_notification({
-            "name": req.name,
-            "phone": req.phone,
-            "product_name": PRODUCTS_BY_ID[req.product_id]["name"],
-            "price": PRODUCTS_BY_ID[req.product_id]["price"],
-            "birth_datetime": f"{req.birth_date} {req.birth_time or '시간 모름'}",
-        })
-    except Exception as e:
-        print(f"[주문 {order_id}] 텔레그램 알림 발송 실패: {e}")
+    background_tasks.add_task(_notify_admin_new_order, order_id, req)
 
     return {"order_id": order_id, "status": "awaiting_payment"}
 
@@ -208,9 +218,12 @@ def admin_page(username: str = Depends(verify_admin)):
           <td>{product.get('name', o['product_id'])}</td>
           <td>{o['price']:,}원</td>
           <td>{o['created_at'][:16].replace('T',' ')}</td>
-          <td>
-            <form method="post" action="/admin/confirm/{o['id']}" onsubmit="return confirm('입금을 확인하셨습니까? {o['name']}님 / {o['price']:,}원');">
+          <td style="white-space:nowrap;">
+            <form method="post" action="/admin/confirm/{o['id']}" style="display:inline-block;" onsubmit="return confirm('입금을 확인하셨습니까? {o['name']}님 / {o['price']:,}원');">
               <button type="submit" style="background:#B8923F; color:#16140F; border:none; padding:8px 14px; border-radius:4px; font-weight:700; cursor:pointer;">입금확인</button>
+            </form>
+            <form method="post" action="/admin/cancel/{o['id']}" style="display:inline-block; margin-left:6px;" onsubmit="return confirm('이 신청을 취소/삭제하시겠습니까? {o['name']}님 / {o['price']:,}원\\n(거래 불발 등으로 목록에서 제거합니다)');">
+              <button type="submit" style="background:transparent; color:#D96C6C; border:1px solid #D96C6C; padding:8px 14px; border-radius:4px; font-weight:700; cursor:pointer;">취소/삭제</button>
             </form>
           </td>
         </tr>"""
@@ -281,6 +294,17 @@ def admin_confirm_payment(order_id: int, background_tasks: BackgroundTasks,
         background_tasks.add_task(process_order, order_id)
 
     return HTMLResponse('<script>alert("입금확인 처리되었습니다."); window.location.href="/admin";</script>')
+
+
+@app.post("/admin/cancel/{order_id}")
+def admin_cancel_order(order_id: int, username: str = Depends(verify_admin)):
+    order = db.get_order(order_id)
+    if not order or order["status"] != "awaiting_payment":
+        raise HTTPException(404, "입금 대기 중인 주문이 아닙니다.")
+
+    db.cancel_order(order_id)
+
+    return HTMLResponse('<script>alert("신청이 취소/삭제되었습니다."); window.location.href="/admin";</script>')
 
 
 @app.post("/admin/test-send")

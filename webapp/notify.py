@@ -120,30 +120,29 @@ TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN")
 TELEGRAM_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID")
 
 
-def send_telegram_order_notification(order: dict):
-    """새 주문 접수 알림을 텔레그램으로 보낸다."""
+def send_telegram_message(text: str):
+    """관리자(나)에게 텔레그램으로 알림을 보낸다.
+
+    TELEGRAM_BOT_TOKEN / TELEGRAM_CHAT_ID 환경변수가 설정되어 있어야 하고,
+    받는 사람이 미리 해당 봇과 대화를 한 번 시작(/start)한 상태여야 한다.
+    실패해도 서비스 본 동작(신청 접수 등)을 막으면 안 되므로 예외를 던지지
+    않고 (성공여부, 에러메시지) 튜플을 돌려준다 — 호출부에서 로그만 남기면 된다.
+    """
     if not (TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID):
-        raise RuntimeError(
-            "텔레그램 알림 발송에 필요한 환경변수가 설정되지 않았습니다. "
-            "(TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID)"
+        return False, "TELEGRAM_BOT_TOKEN / TELEGRAM_CHAT_ID 환경변수가 설정되지 않았습니다."
+
+    url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
+    try:
+        resp = requests.post(
+            url,
+            json={"chat_id": TELEGRAM_CHAT_ID, "text": text},
+            timeout=10,
         )
-
-    text = (
-        "🔔 새 신청이 접수되었습니다\n\n"
-        f"이름: {order.get('name')}\n"
-        f"연락처: {order.get('phone')}\n"
-        f"상품명: {order.get('product_name')}\n"
-        f"금액: {order.get('price'):,}원\n"
-        f"생년월일시: {order.get('birth_datetime')}\n"
-    )
-
-    resp = requests.post(
-        f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage",
-        data={"chat_id": TELEGRAM_CHAT_ID, "text": text},
-        timeout=10,
-    )
-    resp.raise_for_status()
-    return resp.json()
+        if resp.status_code >= 400:
+            return False, f"텔레그램 발송 실패 ({resp.status_code}): {resp.text}"
+        return True, None
+    except Exception as e:  # 네트워크 오류 등
+        return False, f"텔레그램 발송 중 예외 발생: {e}"
 
 
 SOLAPI_API_KEY = os.environ.get("SOLAPI_API_KEY")
