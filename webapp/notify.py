@@ -108,6 +108,44 @@ PDF 파일을 열어 확인해주세요.
 # '대체발송' 옵션도 대행사 API가 보통 지원한다.
 # ---------------------------------------------------------------------------
 
+# ---------------------------------------------------------------------------
+# 텔레그램 알림 발송
+#
+# 새 신청이 접수될 때마다 관리자 텔레그램으로 알림을 보낸다.
+# 준비물: 텔레그램 봇 생성(@BotFather) 후 TELEGRAM_BOT_TOKEN 발급,
+#         알림을 받을 채팅방의 TELEGRAM_CHAT_ID 확인.
+# ---------------------------------------------------------------------------
+
+TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN")
+TELEGRAM_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID")
+
+
+def send_telegram_order_notification(order: dict):
+    """새 주문 접수 알림을 텔레그램으로 보낸다."""
+    if not (TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID):
+        raise RuntimeError(
+            "텔레그램 알림 발송에 필요한 환경변수가 설정되지 않았습니다. "
+            "(TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID)"
+        )
+
+    text = (
+        "🔔 새 신청이 접수되었습니다\n\n"
+        f"이름: {order.get('name')}\n"
+        f"연락처: {order.get('phone')}\n"
+        f"상품명: {order.get('product_name')}\n"
+        f"금액: {order.get('price'):,}원\n"
+        f"생년월일시: {order.get('birth_datetime')}\n"
+    )
+
+    resp = requests.post(
+        f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage",
+        data={"chat_id": TELEGRAM_CHAT_ID, "text": text},
+        timeout=10,
+    )
+    resp.raise_for_status()
+    return resp.json()
+
+
 SOLAPI_API_KEY = os.environ.get("SOLAPI_API_KEY")
 SOLAPI_API_SECRET = os.environ.get("SOLAPI_API_SECRET")
 KAKAO_SENDER_KEY = os.environ.get("KAKAO_SENDER_KEY")  # 카카오 발신프로필 키

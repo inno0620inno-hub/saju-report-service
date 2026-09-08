@@ -30,7 +30,7 @@ from apscheduler.schedulers.background import BackgroundScheduler
 import secrets
 
 import db
-from notify import send_email_with_pdf, send_kakao_alimtalk
+from notify import send_email_with_pdf, send_kakao_alimtalk, send_telegram_order_notification
 
 # saju_core.py, generate_report.py 등이 있는 상위 폴더를 import 경로에 추가
 sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
@@ -164,6 +164,17 @@ def submit_order(req: SubmitRequest, background_tasks: BackgroundTasks):
 
     # 이제 신청만으로는 처리를 시작하지 않는다. 관리자가 입금을 확인하고
     # /admin 페이지에서 '입금확인' 버튼을 눌러야 그때부터 처리가 시작된다.
+
+    try:
+        send_telegram_order_notification({
+            "name": req.name,
+            "phone": req.phone,
+            "product_name": PRODUCTS_BY_ID[req.product_id]["name"],
+            "price": PRODUCTS_BY_ID[req.product_id]["price"],
+            "birth_datetime": f"{req.birth_date} {req.birth_time or '시간 모름'}",
+        })
+    except Exception as e:
+        print(f"[주문 {order_id}] 텔레그램 알림 발송 실패: {e}")
 
     return {"order_id": order_id, "status": "awaiting_payment"}
 
