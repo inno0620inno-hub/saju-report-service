@@ -141,12 +141,14 @@ def _notify_admin_new_order(order_id: int, req: "SubmitRequest"):
     """신규 신청이 들어오면 관리자에게 텔레그램으로 알림을 보낸다."""
     product_name = PRODUCTS_BY_ID.get(req.product_id, {}).get("name", req.product_id)
     price = PRODUCTS_BY_ID.get(req.product_id, {}).get("price", 0)
+    birth_datetime = f"{req.birth_date} {req.birth_time or '시간 모름'}"
     text = (
         f"[금빛 사주명식] 새 신청 접수\n"
         f"주문번호: {order_id}\n"
         f"이름: {req.name}\n"
         f"연락처: {req.phone}\n"
         f"상품: {product_name} ({price:,}원)\n"
+        f"생년월일시: {birth_datetime}\n"
         f"관리자 페이지에서 입금 확인 후 처리해주세요."
     )
     ok, err = send_telegram_message(text)
