@@ -1,309 +1,533 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>금빛사주명식 - 프리미엄 사주 리포트</title>
-    <link rel="stylesheet" href="https://jsdelivr.net">
-    <style>
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-            font-family: 'Pretendard', sans-serif;
-        }
-        body {
-            background-color: #0b0b0b;
-            color: #e0e0e0;
-            line-height: 1.6;
-        }
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 0 20px;
-        }
-        
-        /* 1. Hero Section */
-        .hero {
-            background: linear-gradient(180deg, #141414 0%, #0b0b0b 100%);
-            text-align: center;
-            padding: 100px 20px 60px 20px;
-            border-bottom: 1px solid #1a1a1a;
-        }
-        .hero-badge {
-            color: #d4af37;
-            font-size: 14px;
-            text-transform: uppercase;
-            letter-spacing: 3px;
-            margin-bottom: 15px;
-            font-weight: 600;
-        }
-        .hero h1 {
-            font-size: 36px;
-            font-weight: 700;
-            color: #ffffff;
-            line-height: 1.4;
-            margin-bottom: 25px;
-        }
-        .hero h1 span {
-            color: #d4af37;
-        }
-        .hero p {
-            color: #999;
-            font-size: 16px;
-            max-width: 650px;
-            margin: 0 auto 40px auto;
-        }
-        .btn-primary {
-            display: inline-block;
-            background-color: #d4af37;
-            color: #0b0b0b;
-            padding: 16px 45px;
-            font-weight: 700;
-            font-size: 16px;
-            border-radius: 6px;
-            text-decoration: none;
-            transition: all 0.3s ease;
-            box-shadow: 0 4px 20px rgba(212, 175, 55, 0.25);
-        }
-        .btn-primary:hover {
-            background-color: #f1cc5d;
-            transform: translateY(-2px);
-        }
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>금빛사주명식Order</title>
+<meta name="description" content="태어난 순간의 여덟 글자로 성격·대운·재물·애정·건강까지, 금빛 사주명식이 정성껏 풀어드립니다.">
+<meta property="og:title" content="금빛사주명식Order">
+<meta property="og:description" content="태어난 순간의 여덟 글자로 성격·대운·재물·애정·건강까지 깊이 있게 풀어드리는 사주 명식 리포트">
+<meta property="og:type" content="website">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
 
-        /* 2. Preview Section */
-        .preview {
-            padding: 80px 0;
-            background-color: #0b0b0b;
-        }
-        .section-title {
-            text-align: center;
-            font-size: 26px;
-            color: #ffffff;
-            margin-bottom: 15px;
-            font-weight: 700;
-        }
-        .section-subtitle {
-            text-align: center;
-            color: #777;
-            font-size: 15px;
-            margin-bottom: 50px;
-        }
-        .preview-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-            gap: 30px;
-        }
-        .preview-card {
-            background-color: #121212;
-            border: 1px solid #1f1f1f;
-            border-radius: 12px;
-            overflow: hidden;
-            transition: transform 0.3s ease;
-        }
-        .preview-card:hover {
-            transform: translateY(-5px);
-            border-color: #333;
-        }
-        .card-header {
-            padding: 18px 20px;
-            font-size: 16px;
-            font-weight: 700;
-            color: #d4af37;
-            border-bottom: 1px solid #1f1f1f;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-        }
-        .card-body {
-            padding: 20px;
-        }
-        .card-body p {
-            color: #aaa;
-            font-size: 14px;
-            margin-bottom: 15px;
-            height: 66px;
-            overflow: hidden;
-        }
-        .card-tags {
-            display: flex;
-            gap: 8px;
-            flex-wrap: wrap;
-        }
-        .tag {
-            background-color: #1a1a1a;
-            color: #888;
-            font-size: 12px;
-            padding: 4px 10px;
-            border-radius: 4px;
-            border: 1px solid #262626;
-        }
+  :root {
+    --ink: #16140F;
+    --ink-soft: #201D17;
+    --ink-softer: #2A251C;
+    --paper: #F3EDE0;
+    --paper-dim: #C9C0AC;
+    --gold: #B8923F;
+    --gold-bright: #D4AF5A;
+    --error: #C0524A;
+    --wood: #4C7A52; --fire: #B03A2E; --earth: #C9A227; --metal: #C9C4B4; --water: #3A5A8C;
+  }
 
-        /* 3. Index Section */
-        .index-section {
-            background-color: #0e0e0e;
-            padding: 80px 0;
-            border-top: 1px solid #1a1a1a;
-            border-bottom: 1px solid #1a1a1a;
-        }
-        .index-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-            gap: 20px;
-            margin-top: 40px;
-        }
-        .index-item {
-            background-color: #141414;
-            padding: 25px;
-            border-left: 3px solid #d4af37;
-            border-radius: 0 8px 8px 0;
-        }
-        .index-item h3 {
-            font-size: 16px;
-            color: #ffffff;
-            margin-bottom: 8px;
-            font-weight: 600;
-        }
-        .index-item p {
-            color: #888;
-            font-size: 13px;
-            line-height: 1.5;
-        }
+  html, body {
+    background: var(--ink);
+    color: var(--paper);
+    font-family: -apple-system, BlinkMacSystemFont, 'Noto Sans KR', 'Malgun Gothic', sans-serif;
+    min-height: 100vh;
+  }
 
-        /* 4. USP (Scheduling) Section */
-        .usp-section {
-            background: linear-gradient(135deg, #141414 0%, #070707 100%);
-            padding: 80px 20px;
-            text-align: center;
-        }
-        .usp-content {
-            max-width: 700px;
-            margin: 0 auto;
-        }
-        .usp-icon {
-            font-size: 32px;
-            margin-bottom: 15px;
-            display: inline-block;
-        }
-        .usp-section h2 {
-            font-size: 24px;
-            color: #d4af37;
-            margin-bottom: 20px;
-            font-weight: 700;
-        }
-        .usp-section p {
-            color: #b0b0b0;
-            font-size: 15px;
-            line-height: 1.7;
-        }
+  .hero {
+    padding: 64px 20px 40px 20px;
+    text-align: center;
+    background: radial-gradient(circle at 50% 0%, rgba(212,175,90,0.14), transparent 55%);
+  }
+  .hero .eyebrow {
+    letter-spacing: 0.4em;
+    font-size: 11px;
+    color: var(--gold);
+    margin-bottom: 20px;
+  }
+  .hero .hanja {
+    font-size: 56px;
+    font-weight: 700;
+    color: var(--paper);
+    line-height: 1;
+    margin-bottom: 8px;
+    font-family: Georgia, serif;
+  }
+  .hero h1 {
+    font-size: 26px;
+    font-weight: 700;
+    margin-bottom: 14px;
+    color: var(--paper);
+  }
+  .hero p {
+    color: var(--paper-dim);
+    font-size: 14.5px;
+    line-height: 1.7;
+    max-width: 480px;
+    margin: 0 auto;
+  }
 
-        /* 5. Footer / Disclaimer */
-        .disclaimer {
-            background-color: #070707;
-            padding: 40px 20px;
-            text-align: center;
-            border-top: 1px solid #141414;
-        }
-        .disclaimer p {
-            color: #555;
-            font-size: 12px;
-            max-width: 800px;
-            margin: 0 auto;
-            line-height: 1.6;
-        }
+  .oheng-strip {
+    display: flex;
+    justify-content: center;
+    gap: 6px;
+    margin: 24px 0 0 0;
+  }
+  .oheng-dot { width: 8px; height: 8px; border-radius: 50%; }
 
-        @media (max-width: 768px) {
-            .hero h1 { font-size: 28px; }
-            .hero p { font-size: 14px; }
-            .section-title { font-size: 22px; }
-            .index-grid { grid-template-columns: 1fr; }
-        }
-    </style>
+  .kakao-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 22px;
+    padding: 9px 16px;
+    border-radius: 100px;
+    background: rgba(212,175,90,0.1);
+    border: 1px solid rgba(212,175,90,0.35);
+    color: var(--gold-bright);
+    font-size: 12.5px;
+    font-weight: 600;
+    text-decoration: none;
+  }
+
+  .container {
+    max-width: 520px;
+    margin: 0 auto;
+    padding: 0 20px 60px 20px;
+  }
+
+  .card {
+    background: var(--ink-soft);
+    border: 1px solid rgba(184,146,63,0.25);
+    border-radius: 4px;
+    padding: 32px 26px;
+  }
+
+  .field { margin-bottom: 22px; }
+  .field label {
+    display: block;
+    font-size: 12.5px;
+    color: var(--gold-bright);
+    letter-spacing: 0.05em;
+    margin-bottom: 8px;
+  }
+  .field .hint {
+    font-size: 11.5px;
+    color: var(--paper-dim);
+    margin-top: 6px;
+  }
+
+  input[type=text], input[type=tel], input[type=email], input[type=date],
+  input[type=time], input[type=datetime-local], select {
+    width: 100%;
+    background: var(--ink-softer);
+    border: 1px solid rgba(201,192,172,0.2);
+    border-radius: 3px;
+    padding: 12px 14px;
+    color: var(--paper);
+    font-size: 14.5px;
+    font-family: inherit;
+  }
+  input::placeholder { color: #6b6558; }
+  input:focus, select:focus {
+    outline: none;
+    border-color: var(--gold);
+  }
+
+  .row2 { display: flex; gap: 12px; }
+  .row2 > div { flex: 1; }
+
+  .radio-group { display: flex; gap: 10px; flex-wrap: wrap; }
+  .radio-option {
+    flex: 1;
+    min-width: 100px;
+    position: relative;
+  }
+  .radio-option input { position: absolute; opacity: 0; width: 0; height: 0; }
+  .radio-option label {
+    display: block;
+    text-align: center;
+    padding: 12px 8px;
+    background: var(--ink-softer);
+    border: 1px solid rgba(201,192,172,0.2);
+    border-radius: 3px;
+    font-size: 13.5px;
+    color: var(--paper-dim);
+    cursor: pointer;
+    margin: 0;
+  }
+  .radio-option input:checked + label {
+    border-color: var(--gold);
+    color: var(--gold-bright);
+    background: rgba(184,146,63,0.12);
+  }
+
+  .checkbox-line {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    color: var(--paper-dim);
+  }
+  .checkbox-line input { width: 16px; height: 16px; }
+
+  #scheduleBlock { display: none; margin-top: 14px; }
+  #scheduleBlock.show { display: block; }
+
+  .submit-btn {
+    width: 100%;
+    background: linear-gradient(135deg, var(--gold-bright), var(--gold));
+    color: var(--ink);
+    font-weight: 700;
+    font-size: 15.5px;
+    border: none;
+    border-radius: 3px;
+    padding: 15px;
+    cursor: pointer;
+    margin-top: 8px;
+    letter-spacing: 0.02em;
+  }
+  .submit-btn:hover { filter: brightness(1.08); }
+  .submit-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  .disclaimer {
+    font-size: 11.5px;
+    color: var(--paper-dim);
+    text-align: center;
+    margin-top: 16px;
+    line-height: 1.7;
+  }
+
+  .status-msg {
+    display: none;
+    margin-top: 18px;
+    padding: 14px 16px;
+    border-radius: 3px;
+    font-size: 13.5px;
+    line-height: 1.7;
+  }
+  .status-msg.success {
+    display: block;
+    background: rgba(76,122,82,0.15);
+    border: 1px solid rgba(76,122,82,0.4);
+    color: #8FBB94;
+  }
+  .status-msg.error {
+    display: block;
+    background: rgba(192,82,74,0.15);
+    border: 1px solid rgba(192,82,74,0.4);
+    color: #E39A93;
+  }
+
+  .price-tag {
+    text-align: center;
+    margin-bottom: 24px;
+  }
+  .price-tag .price {
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--gold-bright);
+  }
+  .price-tag .desc {
+    font-size: 12.5px;
+    color: var(--paper-dim);
+    margin-top: 4px;
+  }
+
+  .deposit-box {
+    background: var(--ink-softer);
+    border: 1px solid rgba(184,146,63,0.35);
+    border-radius: 4px;
+    padding: 18px 18px;
+    margin-bottom: 20px;
+  }
+  .deposit-title {
+    font-size: 13px;
+    color: var(--gold-bright);
+    font-weight: 700;
+    margin-bottom: 10px;
+  }
+  .deposit-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 13.5px;
+    padding: 5px 0;
+    color: var(--paper-dim);
+  }
+  .deposit-row b { color: var(--paper); }
+
+  .product-section { margin-bottom: 26px; }
+  .product-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+  .product-card {
+    background: var(--ink-softer);
+    border: 1px solid rgba(201,192,172,0.2);
+    border-radius: 3px;
+    padding: 12px 12px;
+    cursor: pointer;
+    text-align: left;
+  }
+  .product-card.selected {
+    border-color: var(--gold);
+    background: rgba(184,146,63,0.12);
+  }
+  .product-card .p-name {
+    font-size: 13.5px;
+    font-weight: 700;
+    color: var(--paper);
+    margin-bottom: 3px;
+  }
+  .product-card .p-desc {
+    font-size: 11px;
+    color: var(--paper-dim);
+    margin-bottom: 6px;
+    line-height: 1.4;
+  }
+  .product-card .p-price {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--gold-bright);
+  }
+</style>
 </head>
 <body>
 
-    <!-- 1. Hero Section -->
-    <section class="hero">
-        <div class="container">
-            <div class="hero-badge">Premium Horoscope Guide</div>
-            <h1>단 한 번의 입력으로 배달되는<br><span>18페이지 분량</span>의 나만의 사주 가이드북</h1>
-            <p>
-                철학관에 직접 찾아가기 부담스럽거나, 단발성 타로 상담이 아쉬우셨나요? <br>
-                타고난 성격 기질부터 5년의 흐름, 자녀·재물·커리어까지 정밀 연산하여 나만을 위한 완벽한 파일로 보내드립니다.
-            </p>
-            <a href="#order-form-anchor" class="btn-primary">사주 리포트 신청하기</a>
+<div class="hero">
+  <div class="eyebrow">사 주 명 식 해 설</div>
+  <div class="hanja">命</div>
+  <h1>나만의 사주 명식 리포트</h1>
+  <p>태어난 순간의 여덟 글자를 정밀하게 계산하여,<br>성격·대운·재물·애정·건강까지 깊이 있게 풀어드립니다.</p>
+  <div class="oheng-strip">
+    <div class="oheng-dot" style="background:var(--wood)"></div>
+    <div class="oheng-dot" style="background:var(--fire)"></div>
+    <div class="oheng-dot" style="background:var(--earth)"></div>
+    <div class="oheng-dot" style="background:var(--metal)"></div>
+    <div class="oheng-dot" style="background:var(--water)"></div>
+  </div>
+  <a href="http://pf.kakao.com/_gEISX" target="_blank" rel="noopener" class="kakao-chip">
+    💬 신청 전 궁금한 점, 카카오톡 채널로 문의하기
+  </a>
+</div>
+
+<div class="container">
+  <div class="card">
+
+    <div class="product-section">
+      <label style="display:block; font-size:12.5px; color:var(--gold-bright); letter-spacing:0.05em; margin-bottom:10px;">상품 선택</label>
+      <div id="productGrid" class="product-grid">
+        <div style="color:var(--paper-dim); font-size:13px;">상품 목록을 불러오는 중...</div>
+      </div>
+    </div>
+
+    <form id="sajuForm">
+      <input type="hidden" name="product_id" id="productIdInput" value="full">
+      <div class="field">
+        <label>이름</label>
+        <input type="text" name="name" placeholder="홍길동" required>
+      </div>
+
+      <div class="field">
+        <label>연락처</label>
+        <input type="tel" name="phone" placeholder="010-1234-5678" required>
+      </div>
+
+      <div class="field">
+        <label>이메일 (PDF 백업 발송용)</label>
+        <input type="email" name="email" placeholder="example@email.com" required>
+      </div>
+
+      <div class="field">
+        <label>생년월일</label>
+        <input type="date" name="birth_date" required>
+        <div class="hint">양력 기준으로 입력해주세요. (음력 생일은 현재 지원 예정)</div>
+      </div>
+
+      <div class="field">
+        <label>태어난 시간</label>
+        <div class="row2">
+          <div><input type="time" name="birth_time" id="birthTimeInput" required></div>
         </div>
-    </section>
-
-    <!-- 2. Preview Section -->
-    <section class="preview">
-        <div class="container">
-            <h2 class="section-title">🔍 내 손안에 받아보는 사주 해설서</h2>
-            <p class="section-subtitle">디자인과 정밀함 모두 잡은 실제 금빛사주 리포트의 본문 예시입니다.</p>
-            
-            <div class="preview-grid">
-                <!-- 카드 1 -->
-                <div class="preview-card">
-                    <div class="card-header">
-                        <span>초대운 및 향후 5년 흐름</span>
-                        <span style="font-size: 12px; color: #555;">P. 9 / P. 11</span>
-                    </div>
-                    <div class="card-body">
-                        <p>대운이 원국의 월주·시주와 똑같이 열리는 변곡점 분석부터, 2026년 을사년(乙巳年)을 시작으로 다가올 5년의 세운 흐름과 내 기운의 색깔 변화를 정밀하게 짚어냅니다.</p>
-                        <div class="card-tags">
-                            <span class="tag">#대운의흐름</span>
-                            <span class="tag">#5년흐름</span>
-                            <span class="tag">#세운분석</span>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- 카드 2 -->
-                <div class="preview-card">
-                    <div class="card-header">
-                        <span>성격과 기질 분석</span>
-                        <span style="font-size: 12px; color: #555;">P. 5</span>
-                    </div>
-                    <div class="card-body">
-                        <p>무토(戊土)의 거대한 산처럼 굳건하고 단단한 당신의 핵심 강점 3가지를 명확하게 해석하고, 고집과 신념 사이에서 대인관계를 매끄럽게 만들기 위해 보완할 점을 조언합니다.</p>
-                        <div class="card-tags">
-                            <span class="tag">#성격과기질</span>
-                            <span class="tag">#타고난그릇</span>
-                            <span class="tag">#오행성향</span>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- 카드 3 -->
-                <div class="preview-card">
-                    <div class="card-header">
-                        <span>종합 라이프 솔루션</span>
-                        <span style="font-size: 12px; color: #555;">P. 10 ~ P. 15</span>
-                    </div>
-                    <div class="card-body">
-                        <p>재물을 대하는 축적형 태도, 비즈니스 및 동업 구조 적합성, 커리어의 이직·취업 도약 타이밍, 깊이 열리는 애정·결혼운의 특징까지 살아가며 꼭 필요한 영역을 완벽하게 밀착 가이드합니다.</p>
-                        <div class="card-tags">
-                            <span class="tag">#재물운</span>
-                            <span class="tag">#이직취업운</span>
-                            <span class="tag">#애정운</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
+        <div class="checkbox-line" style="margin-top:10px;">
+          <input type="checkbox" id="timeUnknown" name="time_unknown">
+          <label for="timeUnknown" style="margin:0; color:var(--paper-dim); font-size:13px;">
+            정확한 시간을 몰라요 (시주는 제외하고 분석합니다)
+          </label>
         </div>
-    </section>
+      </div>
 
-    <!-- 3. Index Section -->
-    <section class="index-section">
-        <div class="container">
-            <h2 class="section-title">📖 리포트 상세 목차 안내</h2>
-            <p class="section-subtitle">스쳐 지나가는 단발성 문장이 아닌, 평생 두고 읽는 소장용 종합 시크릿 북입니다.</p>
-            
-            <div class="index-grid">
-                <div class="index-item">
-                    <h3>🪙 Ⅷ. 재물운</h3>
-                    <p>돈을 대하는 본질적 성향과 시간이 결합될 때 결실을 맺는 안정적인 자산 관리 패턴 제안</p>
-                </div>
-                <div class="index-item">
-                    <h3>💼 Ⅸ. 사업·창업운</h3>
-                    <p>단독형과 동업 구조 중 나에게 맞는 형태 및 기운이 들어와 사업을 벌이기 가장 좋은 시기 제시</p>
+      <div class="field">
+        <label>성별</label>
+        <div class="radio-group">
+          <div class="radio-option">
+            <input type="radio" name="gender" value="M" id="genderM" required>
+            <label for="genderM">남성</label>
+          </div>
+          <div class="radio-option">
+            <input type="radio" name="gender" value="F" id="genderF">
+            <label for="genderF">여성</label>
+          </div>
+        </div>
+      </div>
+
+      <div class="field">
+        <label>받는 시점</label>
+        <div class="radio-group">
+          <div class="radio-option">
+            <input type="radio" name="delivery_mode" value="immediate" id="deliverNow" checked>
+            <label for="deliverNow">지금 바로</label>
+          </div>
+          <div class="radio-option">
+            <input type="radio" name="delivery_mode" value="scheduled" id="deliverLater">
+            <label for="deliverLater">시간 예약</label>
+          </div>
+        </div>
+
+        <div id="scheduleBlock">
+          <div class="row2" style="margin-top:12px;">
+            <div><input type="date" name="schedule_date" id="scheduleDate"></div>
+            <div><input type="time" name="schedule_time" id="scheduleTime"></div>
+          </div>
+          <div class="hint">한국 시간(KST) 기준으로 그 시각에 카카오톡·이메일이 발송됩니다.</div>
+        </div>
+      </div>
+
+      <div class="deposit-box">
+        <div class="deposit-title">입금 안내</div>
+        <div class="deposit-row"><span>은행</span><b>토스뱅크</b></div>
+        <div class="deposit-row"><span>계좌번호</span><b>1001-5571-3435</b></div>
+        <div class="deposit-row"><span>예금주</span><b>하♥진</b></div>
+        <div class="hint" style="margin-top:8px;">
+          선택하신 상품 금액만큼 입금해주세요. <b>입금자명은 위에 적으신 이름과 동일하게</b> 해주시면
+          확인이 빨라져요. 입금 확인 후 순차적으로 리포트가 제작·발송됩니다 (영업일 기준 몇 시간~1일 내외).
+          입금 확인이 늦어지거나 문의사항이 있으시면
+          <a href="http://pf.kakao.com/_gEISX" target="_blank" rel="noopener" style="color:var(--gold-bright); font-weight:600;">카카오톡 채널</a>로 편하게 연락주세요.
+        </div>
+      </div>
+
+      <button type="submit" class="submit-btn" id="submitBtn">신청 완료 (입금 후 확인)</button>
+
+      <div class="disclaimer">
+        본 리포트는 전통 명리학 이론을 바탕으로 한 참고용 콘텐츠이며,<br>
+        의학적·법적·재정적 조언을 대체하지 않습니다.
+      </div>
+
+      <div class="status-msg" id="statusMsg"></div>
+    </form>
+  </div>
+</div>
+
+<script>
+  const deliverLater = document.getElementById('deliverLater');
+  const deliverNow = document.getElementById('deliverNow');
+  const scheduleBlock = document.getElementById('scheduleBlock');
+  const scheduleDate = document.getElementById('scheduleDate');
+  const scheduleTime = document.getElementById('scheduleTime');
+
+  function toggleSchedule() {
+    if (deliverLater.checked) {
+      scheduleBlock.classList.add('show');
+      scheduleDate.required = true;
+      scheduleTime.required = true;
+    } else {
+      scheduleBlock.classList.remove('show');
+      scheduleDate.required = false;
+      scheduleTime.required = false;
+    }
+  }
+  deliverLater.addEventListener('change', toggleSchedule);
+  deliverNow.addEventListener('change', toggleSchedule);
+
+  const timeUnknown = document.getElementById('timeUnknown');
+  const birthTimeInput = document.getElementById('birthTimeInput');
+  timeUnknown.addEventListener('change', () => {
+    if (timeUnknown.checked) {
+      birthTimeInput.required = false;
+      birthTimeInput.disabled = true;
+      birthTimeInput.value = '';
+    } else {
+      birthTimeInput.required = true;
+      birthTimeInput.disabled = false;
+    }
+  });
+
+  // ===== 이 URL을 실제 배포한 서버 주소로 교체하세요 =====
+  const API_ENDPOINT = "https://saju-report-service-production.up.railway.app/api/submit";
+  const PRODUCTS_ENDPOINT = "https://saju-report-service-production.up.railway.app/api/products";
+
+  const productGrid = document.getElementById('productGrid');
+  const productIdInput = document.getElementById('productIdInput');
+  let selectedProductId = 'full';
+
+  async function loadProducts() {
+    try {
+      const res = await fetch(PRODUCTS_ENDPOINT);
+      const products = await res.json();
+      productGrid.innerHTML = '';
+      products.forEach((p, idx) => {
+        const card = document.createElement('div');
+        card.className = 'product-card' + (p.id === selectedProductId ? ' selected' : '');
+        card.dataset.id = p.id;
+        card.innerHTML = `
+          <div class="p-name">${p.name}</div>
+          <div class="p-desc">${p.description}</div>
+          <div class="p-price">${p.price.toLocaleString()}원</div>
+        `;
+        card.addEventListener('click', () => selectProduct(p.id));
+        productGrid.appendChild(card);
+      });
+    } catch (err) {
+      productGrid.innerHTML = '<div style="color:var(--error); font-size:13px;">상품 목록을 불러오지 못했습니다. 새로고침해주세요.</div>';
+    }
+  }
+
+  function selectProduct(id) {
+    selectedProductId = id;
+    productIdInput.value = id;
+    document.querySelectorAll('.product-card').forEach(el => {
+      el.classList.toggle('selected', el.dataset.id === id);
+    });
+  }
+
+  loadProducts();
+
+  const form = document.getElementById('sajuForm');
+  const submitBtn = document.getElementById('submitBtn');
+  const statusMsg = document.getElementById('statusMsg');
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    statusMsg.className = 'status-msg';
+    statusMsg.textContent = '';
+
+    const fd = new FormData(form);
+    const payload = Object.fromEntries(fd.entries());
+    payload.time_unknown = !!document.getElementById('timeUnknown').checked;
+
+    submitBtn.disabled = true;
+    submitBtn.textContent = '접수 중...';
+
+    try {
+      const res = await fetch(API_ENDPOINT, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      const data = await res.json();
+
+      if (!res.ok) throw new Error(data.detail || '접수 중 오류가 발생했습니다.');
+
+      statusMsg.className = 'status-msg success';
+      statusMsg.textContent = '신청 접수 완료! 안내드린 계좌로 입금해주시면, 확인 후 순차적으로 리포트를 제작해 카카오톡·이메일로 보내드립니다.';
+      form.reset();
+      toggleSchedule();
+    } catch (err) {
+      statusMsg.className = 'status-msg error';
+      statusMsg.textContent = '접수에 실패했습니다: ' + err.message;
+    } finally {
+      submitBtn.disabled = false;
+      submitBtn.textContent = '신청 완료 (입금 후 확인)';
+    }
+  });
+</script>
+
+</body>
+</html>
