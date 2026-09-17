@@ -73,11 +73,14 @@
   /* ---------- 사주 원국 명패(시그니처) ----------
      구형 렌더링 엔진(wkhtmltopdf)에서는 flexbox의 균등 배분이 찌그러지는
      경우가 있어, 확실하게 4등분되는 table 레이아웃을 쓴다. */
+  /* 카드처럼 배경/테두리가 있는 요소는 본문 글자와 똑같이 여백 끝까지
+     닿으면 답답하고 잘린 느낌이 나서, 좌우로 살짝 더 안쪽으로 들여서
+     둔다 (텍스트보다 약간 좁게, 가운데 정렬). */
   .myeongsik {
     display: table;
-    width: 100%;
+    width: 94%;
     table-layout: fixed;
-    margin: 16px 0 44px 0;
+    margin: 16px auto 44px auto;
     page-break-inside: avoid;
   }
   .myeongsik-cell {
@@ -145,6 +148,10 @@
   .daeun-age { font-size: 17px; color: #C9C0AC; margin-bottom: 10px; }
   .daeun-gz { font-family: 'Noto Serif CJK KR', serif; font-size: 28px; font-weight: 700; }
 
+  /* .callout도 배경/테두리가 있는 박스형 요소라 .myeongsik과 같은 이유로
+     좌우를 살짝 인셋한다. 오행 바(.oheng-bars)와 대운 타임라인
+     (.daeun-timeline)은 박스 배경이 없는 얇은 선/텍스트 구성이라 본문
+     글자처럼 여백까지 닿아도 잘린 느낌이 나지 않으므로 그대로 둔다. */
   .callout {
     background: #201D17;
     border-left: 5px solid #B8923F;
@@ -152,7 +159,8 @@
     font-size: 24px;
     color: #C9C0AC;
     line-height: 1.6;
-    margin-top: 32px;
+    width: 94%;
+    margin: 32px auto 0 auto;
     page-break-inside: avoid;
   }
 
