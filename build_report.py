@@ -44,12 +44,14 @@ HANJA_NUMERALS = ["一", "二", "三", "四", "五", "六", "七", "八", "九",
                    "二十一", "二十二", "二十三", "二十四", "二十五", "二十六", "二十七", "二十八", "二十九", "三十"]
 
 # 페이지 본문 여백(모든 본문 페이지에 동일하게 적용됨 — wkhtmltopdf 자체 여백 기능 사용)
-# 좌우 여백이 좁으면 글씨가 커진 만큼 답답해 보인다는 피드백에 따라 좌우 여백을
-# 넉넉하게 확보(20mm → 28mm). 위아래는 기존 값 유지.
+# 사용자 피드백: 이 여백(20mm)은 원래 그대로 유지하고, 텍스트/카드/그래프 등
+# "모든" 요소가 항상 이 여백만큼만 페이지 가장자리에서 떨어지도록(더 넓게도,
+# 더 좁게도 하지 않고 전부 동일하게) 통일한다. 답답해 보이는 느낌은 여백이
+# 아니라 글자 크기를 키워서 해결한다.
 BODY_MARGIN_TOP = "22mm"
 BODY_MARGIN_BOTTOM = "22mm"
-BODY_MARGIN_LEFT = "28mm"
-BODY_MARGIN_RIGHT = "28mm"
+BODY_MARGIN_LEFT = "20mm"
+BODY_MARGIN_RIGHT = "20mm"
 
 WATERMARK_DIV = (
     '<div class="watermark"><div class="watermark-mark">SAMPLE · 미리보기</div></div>'
@@ -120,9 +122,29 @@ def _keep_words(text):
     return "".join(out)
 
 
+# 문장이 끝나는 지점(마침표/물음표/느낌표 뒤 공백) 기준으로 문장을 나눈다.
+# "12세부터"처럼 문장 중간의 숫자/조사에는 이 문자들이 붙지 않으므로
+# 오탐 없이 잘 나뉜다.
+_SENTENCE_SPLIT_RE = re.compile(r"(?<=[.!?])\s+")
+
+
+def _split_sentences(text):
+    return [s.strip() for s in _SENTENCE_SPLIT_RE.split(text.strip()) if s.strip()]
+
+
+def _format_prose(text):
+    """
+    한 문단(또는 콜아웃처럼 문단이 아닌 짧은 글) 안에서도 문장마다 줄을
+    바꿔서(줄바꿈, <br>) 읽기 편하게 만든다. 사용자 피드백: "문장마다
+    줄넘겨 그냥. 그게 보기 편하겠다."
+    """
+    sentences = _split_sentences(text)
+    return "<br>".join(_keep_words(s) for s in sentences)
+
+
 def paragraphs(text):
     parts = [p.strip() for p in text.strip().split("\n\n") if p.strip()]
-    return "\n".join(f"<p>{_keep_words(p)}</p>" for p in parts)
+    return "\n".join(f"<p>{_format_prose(p)}</p>" for p in parts)
 
 
 CALLOUTS = {
@@ -156,7 +178,7 @@ def _render_pillars_block(data, chapter_num_str, marker_id, watermark=False):
     {render_pillar_cards(data)}
   </div>
   <div class="body-text">
-    <p>{_keep_words(f"이 사주의 일간(본인을 상징하는 글자)은 {data['day_master']}입니다. 오행 중 "
+    <p>{_format_prose(f"이 사주의 일간(본인을 상징하는 글자)은 {data['day_master']}입니다. 오행 중 "
     f"{max(data['oheng_distribution'], key=data['oheng_distribution'].get)}의 기운이 상대적으로 "
     "강하게 나타나며, 이는 이후 섹션에서 다루는 성격과 흐름의 바탕이 됩니다.")}</p>
   </div>
@@ -182,7 +204,7 @@ def _render_section_block(section_key, data, section_text, chapter_num_str, mark
 
     callout_html = ""
     if section_key in CALLOUTS:
-        callout_html = f'<div class="callout">{_keep_words(CALLOUTS[section_key])}</div>'
+        callout_html = f'<div class="callout">{_format_prose(CALLOUTS[section_key])}</div>'
 
     wm = WATERMARK_DIV if watermark else ""
 
