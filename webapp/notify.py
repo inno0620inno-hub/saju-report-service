@@ -47,7 +47,12 @@ RESEND_FROM_EMAIL = os.environ.get("RESEND_FROM_EMAIL", "onboarding@resend.dev")
 SENDER_NAME = os.environ.get("SENDER_NAME", "사주 명식 리포트")
 
 
-def send_email_with_pdf(to_email: str, name: str, pdf_path: str):
+def send_email_with_pdf(to_email: str, name: str, pdf_path: str, attachment_filename: str = None):
+    """
+    attachment_filename: 이메일에 첨부될 때 고객이 보게 되는 파일명.
+    지정하지 않으면 서버에 저장된 실제 파일명(pdf_path의 basename)을 그대로 사용한다.
+    (서버에 저장되는 실제 파일 경로/이름에는 영향을 주지 않는다 — 발송용 표시 이름만 바꾼다.)
+    """
     if not RESEND_API_KEY:
         raise RuntimeError("RESEND_API_KEY 환경변수가 설정되지 않았습니다.")
 
@@ -64,6 +69,8 @@ PDF 파일을 열어 확인해주세요.
 감사합니다.
 """
 
+    final_filename = attachment_filename or os.path.basename(pdf_path)
+
     payload = {
         "from": f"{SENDER_NAME} <{RESEND_FROM_EMAIL}>",
         "to": [to_email],
@@ -71,7 +78,7 @@ PDF 파일을 열어 확인해주세요.
         "text": body,
         "attachments": [
             {
-                "filename": os.path.basename(pdf_path),
+                "filename": final_filename,
                 "content": pdf_base64,
             }
         ],

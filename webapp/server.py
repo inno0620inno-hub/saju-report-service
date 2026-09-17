@@ -40,6 +40,24 @@ from report_prompts import PRODUCTS, PRODUCTS_BY_ID  # noqa: E402
 OUTPUT_DIR = os.environ.get("OUTPUT_DIR", "generated_reports")
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
+
+def build_attachment_filename(product_id: str, customer_name: str, dt: datetime = None, sample: bool = False) -> str:
+    """
+    고객에게 보이는(이메일 첨부) PDF 파일명을 만든다.
+    예: 금빛사주명식-건강운-하석진-2026년9월18일.pdf
+    서버에 실제로 저장되는 파일명(generate_report.py의 saju_report_... 형식)과는 별개이며,
+    발송 시 첨부파일 표시 이름에만 사용된다.
+    """
+    product_name = PRODUCTS_BY_ID.get(product_id, {}).get("name", product_id)
+    dt = dt or datetime.now()
+    date_str = f"{dt.year}년{dt.month}월{dt.day}일"
+    base = f"금빛사주명식-{product_name}-{customer_name}-{date_str}"
+    if sample:
+        base += "-샘플"
+    # 파일명에 쓸 수 없는 특수문자 방어
+    base = re.sub(r'[\\/:*?"<>|]', "", base)
+    return f"{base}.pdf"
+
 app = FastAPI(title="사주 명식 리포트 서비스")
 
 # 랜딩페이지에서 fetch()로 호출할 수 있도록 CORS 허용
@@ -333,7 +351,8 @@ def admin_test_send(
         try:
             pdf_path = generate_full_report(customer, product_id=product_id,
                                              output_dir=OUTPUT_DIR, watermark=True)
-            send_email_with_pdf(email, name, pdf_path)
+            attachment_filename = build_attachment_filename(product_id, name, sample=True)
+            send_email_with_pdf(email, name, pdf_path, attachment_filename=attachment_filename)
             print(f"[테스트발송] {name} / {product_id} -> {email} 완료")
         except Exception as e:
             print(f"[테스트발송] 실패: {e}")
@@ -387,7 +406,8 @@ def process_order(order_id: int):
 
         email_error = None
         try:
-            send_email_with_pdf(order["email"], order["name"], pdf_path)
+            attachment_filename = build_attachment_filename(order["product_id"], order["name"])
+            send_email_with_pdf(order["email"], order["name"], pdf_path, attachment_filename=attachment_filename)
             print(f"[주문 {order_id}] 이메일 발송 완료")
         except Exception as e:
             email_error = str(e)
