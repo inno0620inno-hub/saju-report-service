@@ -43,15 +43,20 @@ HANJA_NUMERALS = ["一", "二", "三", "四", "五", "六", "七", "八", "九",
                    "十一", "十二", "十三", "十四", "十五", "十六", "十七", "十八", "十九", "二十",
                    "二十一", "二十二", "二十三", "二十四", "二十五", "二十六", "二十七", "二十八", "二十九", "三十"]
 
-# 페이지 본문 여백(모든 본문 페이지에 동일하게 적용됨 — wkhtmltopdf 자체 여백 기능 사용)
-# 사용자 피드백: 이 여백(20mm)은 원래 그대로 유지하고, 텍스트/카드/그래프 등
-# "모든" 요소가 항상 이 여백만큼만 페이지 가장자리에서 떨어지도록(더 넓게도,
-# 더 좁게도 하지 않고 전부 동일하게) 통일한다. 답답해 보이는 느낌은 여백이
-# 아니라 글자 크기를 키워서 해결한다.
+# 페이지 본문 여백.
+# 중요: wkhtmltopdf의 --margin-left/right는 "빈 공간"이라서 본문 배경색(어두운
+# 색)이 거기까지 안 칠해지고 페이지 가장자리에 흰 여백이 남는다. 그런데
+# 사용자가 실제로 보는 건 "어두운 화면(박스)" 자체이고, 그 화면의 왼쪽/오른쪽
+# 끝에 글자가 딱 붙어 있는 게 문제라고 지적함. 그래서 왼쪽/오른쪽은
+# wkhtmltopdf 여백을 0으로 없애서 어두운 배경이 페이지 가장자리까지 꽉
+# 채우게(풀블리드) 하고, 대신 그 안에서 CSS padding으로 10mm를 줘서 배경색
+# 자체의 가장자리와 글자 사이에 여백이 생기게 한다(template_body.html의
+# body { padding-left/right: 10mm } 참고). 위/아래는 기존 방식(페이지 번호
+# 자리 확보) 그대로 유지.
 BODY_MARGIN_TOP = "22mm"
 BODY_MARGIN_BOTTOM = "22mm"
-BODY_MARGIN_LEFT = "20mm"
-BODY_MARGIN_RIGHT = "20mm"
+BODY_MARGIN_LEFT = "0"
+BODY_MARGIN_RIGHT = "0"
 
 WATERMARK_DIV = (
     '<div class="watermark"><div class="watermark-mark">SAMPLE · 미리보기</div></div>'
@@ -182,7 +187,7 @@ def _render_pillars_block(data, chapter_num_str, marker_id, watermark=False):
     f"{max(data['oheng_distribution'], key=data['oheng_distribution'].get)}의 기운이 상대적으로 "
     "강하게 나타나며, 이는 이후 섹션에서 다루는 성격과 흐름의 바탕이 됩니다.")}</p>
   </div>
-  <div class="chapter-title-sub" style="margin-top:36px; font-size:22px;">오행(五行) 분포</div>
+  <div class="chapter-title-sub" style="margin-top:40px; font-size:44px;">오행(五行) 분포</div>
   <div class="oheng-bars">
     {render_oheng_bars(data)}
   </div>

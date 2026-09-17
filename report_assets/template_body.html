@@ -19,6 +19,12 @@
     font-family: 'Noto Sans CJK KR', sans-serif;
     background: #16140F;
     color: #F3EDE0;
+    /* 페이지 좌우 여백(wkhtmltopdf --margin-left/right)을 0으로 없애고
+       (풀블리드), 대신 여기 padding으로 어두운 배경 자체의 가장자리와
+       글자/카드/그래프 사이에 10mm 여백을 준다. 이렇게 하면 "검은 화면"의
+       왼쪽·오른쪽 끝에 아무것도 안 닿게 된다. */
+    padding-left: 10mm;
+    padding-right: 10mm;
     /* 한글은 음절 단위로 아무 데서나 줄바꿈이 되면 한 단어가 어색하게
        잘려 보인다(예: "흘러가는" → "흘" / "러가는"). word-break: keep-all
        로 어절(띄어쓰기 단위) 경계에서만 줄바꿈되게 하고, 혹시라도 띄어쓰기
@@ -39,39 +45,41 @@
     page-break-inside: avoid;
     page-break-after: avoid;
   }
+  /* 사용자 피드백: "글씨체는 아까 처음의 두배로 바꿔" — 이번 세션 시작 시점
+     (첫 큰 개편 때 정한) 크기를 기준으로 전부 정확히 2배로 키운다. */
   .chapter-mark {
     font-family: 'Noto Serif CJK KR', serif;
-    font-size: 112px;
+    font-size: 192px;
     color: #B8923F;
     line-height: 1;
-    margin-bottom: 10px;
+    margin-bottom: 14px;
   }
   .chapter-eyebrow {
-    font-size: 22px;
+    font-size: 40px;
     letter-spacing: 0.35em;
     color: #C9C0AC;
-    margin-bottom: 26px;
+    margin-bottom: 30px;
   }
   .chapter-title {
     font-family: 'Noto Serif CJK KR', serif;
-    font-size: 76px;
+    font-size: 128px;
     font-weight: 700;
     color: #F3EDE0;
-    margin-bottom: 10px;
+    margin-bottom: 14px;
   }
   .chapter-title-sub {
-    font-size: 30px;
+    font-size: 52px;
     color: #D4AF5A;
-    margin-bottom: 40px;
+    margin-bottom: 44px;
   }
   .rule {
     height: 2px;
     background: linear-gradient(90deg, #B8923F, transparent);
-    margin-bottom: 40px;
+    margin-bottom: 44px;
   }
   .body-text {
-    font-size: 42px;
-    line-height: 1.7;
+    font-size: 72px;
+    line-height: 1.55;
     color: #E7E1D2;
     /* 문장 단위로 줄을 바꾸다 보니 한 줄 안에 띄어쓰기(줄바꿈 가능 지점)가
        적어서, 강제로 양쪽을 맞추면(justify) 단어 사이가 부자연스럽게
@@ -107,21 +115,21 @@
     text-align: center;
   }
   .pillar-label {
-    font-size: 20px;
+    font-size: 36px;
     color: #C9C0AC;
     letter-spacing: 0.2em;
-    margin-bottom: 16px;
+    margin-bottom: 20px;
   }
   .pillar-char {
     font-family: 'Noto Serif CJK KR', serif;
-    font-size: 70px;
+    font-size: 128px;
     font-weight: 700;
-    line-height: 1.4;
+    line-height: 1.3;
   }
   .pillar-hanja {
-    font-size: 20px;
+    font-size: 36px;
     color: #C9C0AC;
-    margin-top: 8px;
+    margin-top: 10px;
   }
   .oheng-목 { color: #4C7A52; }
   .oheng-화 { color: #B03A2E; }
@@ -130,43 +138,43 @@
   .oheng-수 { color: #3A5A8C; }
 
   /* ---------- 오행 분포 바 ---------- */
-  .oheng-bars { margin: 34px 0 46px 0; page-break-inside: avoid; }
-  .oheng-row { display: table; width: 100%; table-layout: fixed; margin-bottom: 16px; }
-  .oheng-name { display: table-cell; width: 58px; font-size: 26px; color: #F3EDE0; vertical-align: middle; }
-  .oheng-track-cell { display: table-cell; vertical-align: middle; padding: 0 16px; }
-  .oheng-track { height: 18px; background: #201D17; border-radius: 9px; overflow: hidden; }
-  .oheng-fill { height: 100%; border-radius: 9px; }
-  .oheng-count { display: table-cell; width: 40px; font-size: 24px; color: #C9C0AC; text-align: right; vertical-align: middle; }
+  .oheng-bars { margin: 40px 0 50px 0; page-break-inside: avoid; }
+  .oheng-row { display: table; width: 100%; table-layout: fixed; margin-bottom: 22px; }
+  .oheng-name { display: table-cell; width: 90px; font-size: 44px; color: #F3EDE0; vertical-align: middle; }
+  .oheng-track-cell { display: table-cell; vertical-align: middle; padding: 0 18px; }
+  .oheng-track { height: 26px; background: #201D17; border-radius: 13px; overflow: hidden; }
+  .oheng-fill { height: 100%; border-radius: 13px; }
+  .oheng-count { display: table-cell; width: 60px; font-size: 40px; color: #C9C0AC; text-align: right; vertical-align: middle; }
 
   /* ---------- 대운 타임라인 ---------- */
   .daeun-timeline {
     display: table;
     width: 100%;
     table-layout: fixed;
-    margin: 40px 0;
+    margin: 46px 0;
     border-top: 1px solid rgba(184,146,63,0.3);
-    padding-top: 30px;
+    padding-top: 36px;
     page-break-inside: avoid;
   }
-  .daeun-step { display: table-cell; text-align: center; position: relative; padding: 6px 4px; }
+  .daeun-step { display: table-cell; text-align: center; position: relative; padding: 8px 4px; }
   .daeun-step::before {
     content: "";
     position: absolute; top: -31px; left: 50%; transform: translateX(-50%);
     width: 10px; height: 10px; border-radius: 50%;
     background: #B8923F;
   }
-  .daeun-age { font-size: 19px; color: #C9C0AC; margin-bottom: 10px; }
-  .daeun-gz { font-family: 'Noto Serif CJK KR', serif; font-size: 32px; font-weight: 700; }
+  .daeun-age { font-size: 34px; color: #C9C0AC; margin-bottom: 12px; }
+  .daeun-gz { font-family: 'Noto Serif CJK KR', serif; font-size: 56px; font-weight: 700; }
 
   /* 사용자 피드백: 모든 요소가 같은 여백을 써야 하므로 본문과 같은 폭(100%)
      을 쓴다. */
   .callout {
     background: #201D17;
     border-left: 5px solid #B8923F;
-    padding: 26px 30px;
-    font-size: 28px;
+    padding: 32px 34px;
+    font-size: 48px;
     color: #C9C0AC;
-    line-height: 1.6;
+    line-height: 1.5;
     width: 100%;
     margin-top: 32px;
     page-break-inside: avoid;
@@ -180,24 +188,24 @@
     display: table;
     width: 100%;
     table-layout: fixed;
-    padding: 22px 0;
+    padding: 26px 0;
     border-bottom: 1px solid rgba(184,146,63,0.2);
     page-break-inside: avoid;
   }
   .toc-mark {
     display: table-cell;
-    font-family: 'Noto Serif CJK KR', serif; color: #B8923F; font-size: 36px; width: 70px;
+    font-family: 'Noto Serif CJK KR', serif; color: #B8923F; font-size: 64px; width: 120px;
     vertical-align: baseline;
   }
   .toc-name {
     display: table-cell;
-    font-size: 32px; color: #F3EDE0;
+    font-size: 56px; color: #F3EDE0;
     vertical-align: baseline;
   }
   .toc-page {
     display: table-cell;
-    font-size: 25px; color: #C9C0AC;
-    width: 96px; text-align: right; white-space: nowrap;
+    font-size: 44px; color: #C9C0AC;
+    width: 150px; text-align: right; white-space: nowrap;
     vertical-align: baseline;
   }
 
