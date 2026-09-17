@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'Noto Sans CJK KR', sans-serif;
+    background: transparent;
+  }
+  .page-num {
+    text-align: right;
+    padding-right: 16mm;
+    font-size: 16px;
+    color: #C9C0AC;
+    letter-spacing: 0.2em;
+  }
+</style>
+<script>
+function subst() {
+  var vars = {};
+  var x = document.location.search.substring(1).split('&');
+  for (var i in x) {
+    if (!x[i]) continue;
+    var z = x[i].split('=', 2);
+    vars[z[0]] = decodeURIComponent(z[1] || '');
+  }
+  var page = parseInt(vars['page'], 10);
+  var padded = (page < 10 ? '00' : (page < 100 ? '0' : '')) + page;
+  var els = document.getElementsByClassName('page');
+  for (var j = 0; j < els.length; ++j) { els[j].textContent = padded; }
+}
+</script>
+</head>
+<body onload="subst()">
+  <div class="page-num"><span class="page"></span></div>
+</body>
+</html>

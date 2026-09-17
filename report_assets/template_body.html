@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>사주명식 리포트</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { width: 100%; }
+
+  /* 주의: wkhtmltopdf(구형 WebKit 엔진)는 CSS 커스텀 프로퍼티(:root{--x: ...}
+     + var(--x))를 인식하지 못한다. 값이 조용히 무시되면서 그 배경/색상이
+     그냥 안 나오는 버그로 이어지므로, 색상은 전부 아래처럼 hex를 직접 쓴다.
+     (색상 팔레트 참고용 — 실제로는 각 규칙에 값이 그대로 박혀 있음)
+     ink #16140F / ink-soft #201D17 / paper #F3EDE0 / paper-dim #C9C0AC
+     gold #B8923F / gold-bright #D4AF5A
+     오방색 — 목 #4C7A52 / 화 #B03A2E / 토 #C9A227 / 금 #C9C4B4 / 수 #3A5A8C */
+
+  body {
+    font-family: 'Noto Sans CJK KR', sans-serif;
+    background: #16140F;
+    color: #F3EDE0;
+  }
+
+  /* 이 문서는 wkhtmltopdf의 --margin-* 옵션으로 매 물리 페이지마다 동일한
+     여백을 자동으로 받는다 (한 섹션이 여러 페이지로 흘러도 여백이 유지됨).
+     따라서 이 안에서는 페이지 하나짜리 div를 흉내내지 않고, 그냥 자연스럽게
+     아래로 흐르는 문서로 작성한다. */
+
+  .section-break { page-break-before: always; }
+
+  .chapter-head {
+    page-break-inside: avoid;
+    page-break-after: avoid;
+  }
+  .chapter-mark {
+    font-family: 'Noto Serif CJK KR', serif;
+    font-size: 96px;
+    color: #B8923F;
+    line-height: 1;
+    margin-bottom: 10px;
+  }
+  .chapter-eyebrow {
+    font-size: 20px;
+    letter-spacing: 0.35em;
+    color: #C9C0AC;
+    margin-bottom: 26px;
+  }
+  .chapter-title {
+    font-family: 'Noto Serif CJK KR', serif;
+    font-size: 64px;
+    font-weight: 700;
+    color: #F3EDE0;
+    margin-bottom: 10px;
+  }
+  .chapter-title-sub {
+    font-size: 26px;
+    color: #D4AF5A;
+    margin-bottom: 40px;
+  }
+  .rule {
+    height: 2px;
+    background: linear-gradient(90deg, #B8923F, transparent);
+    margin-bottom: 40px;
+  }
+  .body-text {
+    font-size: 36px;
+    line-height: 1.65;
+    color: #E7E1D2;
+    text-align: justify;
+  }
+  .body-text p { margin-bottom: 28px; }
+
+  /* ---------- 사주 원국 명패(시그니처) ----------
+     구형 렌더링 엔진(wkhtmltopdf)에서는 flexbox의 균등 배분이 찌그러지는
+     경우가 있어, 확실하게 4등분되는 table 레이아웃을 쓴다. */
+  .myeongsik {
+    display: table;
+    width: 100%;
+    table-layout: fixed;
+    margin: 16px 0 44px 0;
+    page-break-inside: avoid;
+  }
+  .myeongsik-cell {
+    display: table-cell;
+    padding: 0 7px;
+  }
+  .myeongsik-cell:first-child { padding-left: 0; }
+  .myeongsik-cell:last-child { padding-right: 0; }
+  .pillar-card {
+    background: #201D17;
+    border: 1px solid rgba(184,146,63,0.35);
+    border-radius: 4px;
+    padding: 22px 10px;
+    text-align: center;
+  }
+  .pillar-label {
+    font-size: 18px;
+    color: #C9C0AC;
+    letter-spacing: 0.2em;
+    margin-bottom: 16px;
+  }
+  .pillar-char {
+    font-family: 'Noto Serif CJK KR', serif;
+    font-size: 64px;
+    font-weight: 700;
+    line-height: 1.4;
+  }
+  .pillar-hanja {
+    font-size: 18px;
+    color: #C9C0AC;
+    margin-top: 8px;
+  }
+  .oheng-목 { color: #4C7A52; }
+  .oheng-화 { color: #B03A2E; }
+  .oheng-토 { color: #C9A227; }
+  .oheng-금 { color: #C9C4B4; }
+  .oheng-수 { color: #3A5A8C; }
+
+  /* ---------- 오행 분포 바 ---------- */
+  .oheng-bars { margin: 34px 0 46px 0; page-break-inside: avoid; }
+  .oheng-row { display: table; width: 100%; table-layout: fixed; margin-bottom: 14px; }
+  .oheng-name { display: table-cell; width: 50px; font-size: 22px; color: #F3EDE0; vertical-align: middle; }
+  .oheng-track-cell { display: table-cell; vertical-align: middle; padding: 0 16px; }
+  .oheng-track { height: 16px; background: #201D17; border-radius: 8px; overflow: hidden; }
+  .oheng-fill { height: 100%; border-radius: 8px; }
+  .oheng-count { display: table-cell; width: 34px; font-size: 20px; color: #C9C0AC; text-align: right; vertical-align: middle; }
+
+  /* ---------- 대운 타임라인 ---------- */
+  .daeun-timeline {
+    display: table;
+    width: 100%;
+    table-layout: fixed;
+    margin: 40px 0;
+    border-top: 1px solid rgba(184,146,63,0.3);
+    padding-top: 30px;
+    page-break-inside: avoid;
+  }
+  .daeun-step { display: table-cell; text-align: center; position: relative; padding: 6px 4px; }
+  .daeun-step::before {
+    content: "";
+    position: absolute; top: -31px; left: 50%; transform: translateX(-50%);
+    width: 10px; height: 10px; border-radius: 50%;
+    background: #B8923F;
+  }
+  .daeun-age { font-size: 17px; color: #C9C0AC; margin-bottom: 10px; }
+  .daeun-gz { font-family: 'Noto Serif CJK KR', serif; font-size: 28px; font-weight: 700; }
+
+  .callout {
+    background: #201D17;
+    border-left: 5px solid #B8923F;
+    padding: 24px 28px;
+    font-size: 24px;
+    color: #C9C0AC;
+    line-height: 1.6;
+    margin-top: 32px;
+    page-break-inside: avoid;
+  }
+
+  /* ---------- 목차 ---------- */
+  /* space-between 플렉스가 이 렌더링 엔진(wkhtmltopdf)에서는 폭이 좁게
+     찌부러져서 나오는 경우가 있어, 확실하게 양끝 정렬되는 table 레이아웃을
+     쓴다. */
+  .toc-item {
+    display: table;
+    width: 100%;
+    table-layout: fixed;
+    padding: 22px 0;
+    border-bottom: 1px solid rgba(184,146,63,0.2);
+    page-break-inside: avoid;
+  }
+  .toc-mark {
+    display: table-cell;
+    font-family: 'Noto Serif CJK KR', serif; color: #B8923F; font-size: 32px; width: 64px;
+    vertical-align: baseline;
+  }
+  .toc-name {
+    display: table-cell;
+    font-size: 28px; color: #F3EDE0;
+    vertical-align: baseline;
+  }
+  .toc-page {
+    display: table-cell;
+    font-size: 22px; color: #C9C0AC;
+    width: 90px; text-align: right; white-space: nowrap;
+    vertical-align: baseline;
+  }
+
+  .watermark {
+    position: relative;
+    height: 0;
+  }
+  .watermark-mark {
+    position: absolute;
+    top: 260px; left: 38%; transform: translate(-50%,0) rotate(-30deg);
+    font-size: 42px; font-weight: 900; color: rgba(212,175,90,0.18); letter-spacing: 2px;
+    white-space: nowrap; z-index: 999; pointer-events: none;
+  }
+
+  /* 목차 페이지번호 계산용 숨김 마커. 화면에는 배경색과 같아서 안 보이지만,
+     실제 텍스트로 렌더링되어야 pdftotext로 어느 페이지에 있는지 찾을 수 있다
+     (opacity:0 이나 극소 font-size는 렌더러가 텍스트 레이어에서 아예 빼버릴 수
+     있어서 쓰지 않는다). */
+  .pagemark { position: absolute; color: #16140F; font-size: 8px; line-height: 1; }
+</style>
+</head>
+<body>
+{{BODY_PAGES}}
+</body>
+</html>
