@@ -44,10 +44,12 @@ HANJA_NUMERALS = ["一", "二", "三", "四", "五", "六", "七", "八", "九",
                    "二十一", "二十二", "二十三", "二十四", "二十五", "二十六", "二十七", "二十八", "二十九", "三十"]
 
 # 페이지 본문 여백(모든 본문 페이지에 동일하게 적용됨 — wkhtmltopdf 자체 여백 기능 사용)
+# 좌우 여백이 좁으면 글씨가 커진 만큼 답답해 보인다는 피드백에 따라 좌우 여백을
+# 넉넉하게 확보(20mm → 28mm). 위아래는 기존 값 유지.
 BODY_MARGIN_TOP = "22mm"
 BODY_MARGIN_BOTTOM = "22mm"
-BODY_MARGIN_LEFT = "20mm"
-BODY_MARGIN_RIGHT = "20mm"
+BODY_MARGIN_LEFT = "28mm"
+BODY_MARGIN_RIGHT = "28mm"
 
 WATERMARK_DIV = (
     '<div class="watermark"><div class="watermark-mark">SAMPLE · 미리보기</div></div>'
@@ -99,9 +101,28 @@ def render_daeun_steps(data):
     return "\n".join(out)
 
 
+def _keep_words(text):
+    """
+    이 렌더링 엔진(wkhtmltopdf, 구형 WebKit)은 CSS `word-break: keep-all`을
+    지원하지 않는다(실측 확인됨 — 있어도 없어도 렌더링이 동일함). 그 결과
+    한글 어절 중간에서 줄바꿈이 일어나는 문제가 생긴다
+    (예: "흘러가는" → "흘" / "러가는", "사주를" → "사주" / "를").
+    그래서 공백으로 나뉜 어절마다 white-space:nowrap 스팬으로 감싸서,
+    줄바꿈이 어절 사이(공백)에서만 일어나도록 강제한다.
+    """
+    parts = re.split(r"(\s+)", text)
+    out = []
+    for p in parts:
+        if p == "" or p.isspace():
+            out.append(p)
+        else:
+            out.append(f'<span style="white-space:nowrap">{p}</span>')
+    return "".join(out)
+
+
 def paragraphs(text):
     parts = [p.strip() for p in text.strip().split("\n\n") if p.strip()]
-    return "\n".join(f"<p>{p}</p>" for p in parts)
+    return "\n".join(f"<p>{_keep_words(p)}</p>" for p in parts)
 
 
 CALLOUTS = {
@@ -128,16 +149,16 @@ def _render_pillars_block(data, chapter_num_str, marker_id, watermark=False):
     <div class="chapter-mark">{chapter_num_str}</div>
     <div class="chapter-eyebrow">THE FOUR PILLARS</div>
     <div class="chapter-title">사주 원국</div>
-    <div class="chapter-title-sub">태어난 순간의 하늘과 땅 — 여덟 글자</div>
+    <div class="chapter-title-sub">{_keep_words("태어난 순간의 하늘과 땅 — 여덟 글자")}</div>
     <div class="rule"></div>
   </div>
   <div class="myeongsik">
     {render_pillar_cards(data)}
   </div>
   <div class="body-text">
-    <p>이 사주의 일간(본인을 상징하는 글자)은 {data['day_master']}입니다. 오행 중
-    {max(data['oheng_distribution'], key=data['oheng_distribution'].get)}의 기운이 상대적으로
-    강하게 나타나며, 이는 이후 섹션에서 다루는 성격과 흐름의 바탕이 됩니다.</p>
+    <p>{_keep_words(f"이 사주의 일간(본인을 상징하는 글자)은 {data['day_master']}입니다. 오행 중 "
+    f"{max(data['oheng_distribution'], key=data['oheng_distribution'].get)}의 기운이 상대적으로 "
+    "강하게 나타나며, 이는 이후 섹션에서 다루는 성격과 흐름의 바탕이 됩니다.")}</p>
   </div>
   <div class="chapter-title-sub" style="margin-top:36px; font-size:22px;">오행(五行) 분포</div>
   <div class="oheng-bars">
@@ -151,17 +172,17 @@ def _render_section_block(section_key, data, section_text, chapter_num_str, mark
     extra_visual = ""
     if section_key == "대운흐름":
         extra_visual = f"""
-  <div class="chapter-title-sub" style="margin-top:-6px;">{data['daeun']['direction']} · {data['daeun']['daeun_start_age']}세부터 시작</div>
+  <div class="chapter-title-sub" style="margin-top:-6px;">{_keep_words(f"{data['daeun']['direction']} · {data['daeun']['daeun_start_age']}세부터 시작")}</div>
   <div class="daeun-timeline">
     {render_daeun_steps(data)}
   </div>"""
         subtitle = ""  # 위 extra_visual에서 이미 부제 역할을 하므로 중복 방지
     else:
-        subtitle = f'<div class="chapter-title-sub">{spec["subtitle"]}</div>'
+        subtitle = f'<div class="chapter-title-sub">{_keep_words(spec["subtitle"])}</div>'
 
     callout_html = ""
     if section_key in CALLOUTS:
-        callout_html = f'<div class="callout">{CALLOUTS[section_key]}</div>'
+        callout_html = f'<div class="callout">{_keep_words(CALLOUTS[section_key])}</div>'
 
     wm = WATERMARK_DIV if watermark else ""
 
@@ -171,7 +192,7 @@ def _render_section_block(section_key, data, section_text, chapter_num_str, mark
   <div class="chapter-head">
     <div class="chapter-mark">{chapter_num_str}</div>
     <div class="chapter-eyebrow">{spec['eyebrow']}</div>
-    <div class="chapter-title">{spec['title']}</div>
+    <div class="chapter-title">{_keep_words(spec['title'])}</div>
     {subtitle}
     <div class="rule"></div>
   </div>
@@ -205,7 +226,7 @@ def _render_toc_block(section_keys, page_map, watermark=False):
 
     rows = "\n".join(
         f'<div class="toc-item"><span class="toc-mark">{mark}</span>'
-        f'<span class="toc-name">{name}</span><span class="toc-page">{p}</span></div>'
+        f'<span class="toc-name">{_keep_words(name)}</span><span class="toc-page">{p}</span></div>'
         for mark, name, p in items
     )
 
@@ -298,8 +319,8 @@ def build_report(data, name, birth_info, sections, section_order=None,
         cover_template_path = os.path.join(ASSETS_DIR, "template_cover.html")
         with open(cover_template_path, "r", encoding="utf-8") as f:
             cover_html = f.read()
-        cover_html = cover_html.replace("{{NAME}}", name)
-        cover_html = cover_html.replace("{{BIRTH_INFO}}", birth_info)
+        cover_html = cover_html.replace("{{NAME}}", _keep_words(name))
+        cover_html = cover_html.replace("{{BIRTH_INFO}}", _keep_words(birth_info))
         cover_html = cover_html.replace("{{ISSUE_DATE}}", "2026")
         cover_html = cover_html.replace(
             "{{WATERMARK}}",
