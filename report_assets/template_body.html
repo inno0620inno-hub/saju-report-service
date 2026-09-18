@@ -21,10 +21,10 @@
     color: #F3EDE0;
     /* 페이지 좌우 여백(wkhtmltopdf --margin-left/right)을 0으로 없애고
        (풀블리드), 대신 여기 padding으로 어두운 배경 자체의 가장자리와
-       글자/카드/그래프 사이에 10mm 여백을 준다. 이렇게 하면 "검은 화면"의
+       글자/카드/그래프 사이에 15mm 여백을 준다. 이렇게 하면 "검은 화면"의
        왼쪽·오른쪽 끝에 아무것도 안 닿게 된다. */
-    padding-left: 10mm;
-    padding-right: 10mm;
+    padding-left: 15mm;
+    padding-right: 15mm;
     /* 한글은 음절 단위로 아무 데서나 줄바꿈이 되면 한 단어가 어색하게
        잘려 보인다(예: "흘러가는" → "흘" / "러가는"). word-break: keep-all
        로 어절(띄어쓰기 단위) 경계에서만 줄바꿈되게 하고, 혹시라도 띄어쓰기
@@ -74,7 +74,14 @@
   }
   .rule {
     height: 2px;
-    background: linear-gradient(90deg, #B8923F, transparent);
+    /* 주의: 이 렌더링 엔진(wkhtmltopdf 패치 빌드)은 linear-gradient()를
+       문법(각도/방향 키워드, 퍼센트 스탑 유무)에 관계없이 전부 지원하지
+       않는다 — 실측 결과 background 선언 자체가 통째로 사라진다(각도
+       문법뿐 아니라 "to right" 키워드 문법도 재실측 결과 동일하게 실패).
+       그래서 그라데이션을 완전히 포기하고 단색 + 은은한 글로우로 대체한다. */
+    background: #B8923F;
+    box-shadow: 0 0 8px 0 #B8923F66;
+    width: 90px;
     margin-bottom: 44px;
   }
   .body-text {
@@ -137,14 +144,35 @@
   .oheng-금 { color: #C9C4B4; }
   .oheng-수 { color: #3A5A8C; }
 
-  /* ---------- 오행 분포 바 ---------- */
-  .oheng-bars { margin: 40px 0 50px 0; page-break-inside: avoid; }
-  .oheng-row { display: table; width: 100%; table-layout: fixed; margin-bottom: 22px; }
-  .oheng-name { display: table-cell; width: 90px; font-size: 44px; color: #F3EDE0; vertical-align: middle; }
-  .oheng-track-cell { display: table-cell; vertical-align: middle; padding: 0 18px; }
-  .oheng-track { height: 26px; background: #201D17; border-radius: 13px; overflow: hidden; }
-  .oheng-fill { height: 100%; border-radius: 13px; }
-  .oheng-count { display: table-cell; width: 60px; font-size: 40px; color: #C9C0AC; text-align: right; vertical-align: middle; }
+  /* ---------- 오행 분포 바 ----------
+     밋밋해 보인다는 피드백으로, 그냥 페이지 배경 위에 막대만 떠 있던 것을
+     카드(패널)로 감싸고, 각 오행마다 한자 배지를 달고, 막대는 그라데이션
+     + 은은한 글로우(box-shadow)를 줘서 입체감을 살렸다. */
+  .oheng-panel {
+    background: #201D17;
+    border: 1px solid rgba(184,146,63,0.35);
+    border-radius: 10px;
+    padding: 36px 34px 14px 34px;
+    margin: 24px 0 50px 0;
+    page-break-inside: avoid;
+  }
+  .oheng-row { display: table; width: 100%; table-layout: fixed; margin-bottom: 26px; }
+  .oheng-name { display: table-cell; width: 150px; font-size: 40px; color: #F3EDE0; vertical-align: middle; }
+  .oheng-badge {
+    display: inline-block;
+    width: 56px; height: 56px; line-height: 52px;
+    border: 2px solid; border-radius: 50%;
+    text-align: center;
+    font-family: 'Noto Serif CJK KR', serif; font-size: 30px; font-weight: 700;
+    background: rgba(0,0,0,0.18);
+    vertical-align: middle;
+  }
+  .oheng-name-kr { display: inline-block; vertical-align: middle; margin-left: 14px; }
+  .oheng-track-cell { display: table-cell; vertical-align: middle; padding: 0 20px; }
+  .oheng-track { height: 28px; background: rgba(243,237,224,0.08); border: 1px solid rgba(243,237,224,0.06); border-radius: 14px; overflow: hidden; }
+  .oheng-fill { height: 100%; border-radius: 14px; }
+  .oheng-count { display: table-cell; width: 130px; font-size: 36px; color: #C9C0AC; text-align: right; vertical-align: middle; white-space: nowrap; }
+  .oheng-pct { display: inline-block; margin-left: 10px; font-size: 24px; color: #8C8676; }
 
   /* ---------- 대운 타임라인 ---------- */
   .daeun-timeline {
