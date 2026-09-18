@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>사주명식 리포트</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { width: 100%; height: 100%; }
+  body {
+    font-family: 'Noto Sans CJK KR', sans-serif;
+    background: #16140F;
+    color: #F3EDE0;
+    width: 220mm;
+    height: 391.11mm;
+    position: relative;
+    display: table;
+    word-break: keep-all;
+    overflow-wrap: break-word;
+  }
+  .inner {
+    display: table-cell;
+    vertical-align: middle;
+    text-align: center;
+    padding: 0 20mm;
+  }
+  .eyebrow {
+    letter-spacing: 0.5em;
+    font-size: 18px;
+    color: #B8923F;
+    margin-bottom: 40px;
+  }
+  .hanja-big {
+    font-family: 'Noto Serif CJK KR', serif;
+    font-size: 170px;
+    font-weight: 700;
+    color: #F3EDE0;
+    line-height: 1.05;
+    margin-bottom: 10px;
+  }
+  .title-kr {
+    font-family: 'Noto Serif CJK KR', serif;
+    font-size: 52px;
+    font-weight: 600;
+    color: #D4AF5A;
+    margin-bottom: 56px;
+  }
+  .divider {
+    width: 90px; height: 2px; background: #B8923F;
+    margin: 0 auto 56px auto;
+  }
+  .subject-name {
+    font-size: 38px;
+    color: #F3EDE0;
+    margin-bottom: 14px;
+    font-weight: 700;
+  }
+  .subject-meta {
+    font-size: 22px;
+    color: #C9C0AC;
+    letter-spacing: 0.05em;
+  }
+  .footer-mark {
+    position: absolute;
+    bottom: 90px;
+    left: 0; right: 0;
+    text-align: center;
+    font-size: 16px;
+    color: #C9C0AC;
+    letter-spacing: 0.3em;
+  }
+  .watermark {
+    position: absolute;
+    top: 45%; left: 38%; transform: translate(-50%,-50%) rotate(-30deg);
+    font-size: 42px; font-weight: 900; color: rgba(212,175,90,0.18); letter-spacing: 2px;
+    white-space: nowrap; z-index: 999; pointer-events: none;
+  }
+</style>
+</head>
+<body>
+{{WATERMARK}}
+<div class="inner">
+  <div class="eyebrow">사 주 명 식 해 설</div>
+  <div class="hanja-big">命</div>
+  <div class="title-kr">사주 명식 리포트</div>
+  <div class="divider"></div>
+  <div class="subject-name">{{NAME}}</div>
+  <div class="subject-meta">{{BIRTH_INFO}}</div>
+</div>
+<div class="footer-mark">SAJU REPORT · {{ISSUE_DATE}}</div>
+</body>
+</html>
