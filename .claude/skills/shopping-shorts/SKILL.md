@@ -43,11 +43,15 @@
 
 ### 로컬 환경 (Windows CLI)
 ```
-효과음1: C:\Users\hyeji\Downloads\쇼핑쇼츠\효과음\_.wav
-효과음2: C:\Users\hyeji\Downloads\쇼핑쇼츠\효과음\____.wav
-효과음3: C:\Users\hyeji\Downloads\쇼핑쇼츠\효과음\______.wav
-폰트:    C:\Users\hyeji\Downloads\쇼핑쇼츠\Cafe24Danjunghae-v2.0.ttf
-BGM:     C:\Users\hyeji\Downloads\쇼핑쇼츠\bgm\ (이 폴더 안의 파일 사용)
+C:\Users\hyeji\Downloads\
+├── 쇼핑쇼츠\
+│   └── Cafe24Danjunghae-v2.0.ttf (폰트)
+├── 효과음\
+│   ├── _.wav
+│   ├── ____.wav
+│   └── ______.wav
+└── bgm\
+    └── (BGM 파일들)
 ```
 
 ### BGM 선택 규칙
@@ -55,7 +59,7 @@ BGM:     C:\Users\hyeji\Downloads\쇼핑쇼츠\bgm\ (이 폴더 안의 파일 �
 2. 유튜브 오디오 라이브러리에서 영상 길이에 맞는 곡을 검색/다운로드한다
    - 분위기: 밝음/신남/경쾌 (쇼핑 콘텐츠에 어울리는 것)
    - 길이: 영상 길이와 비슷하거나 약간 긴 곡 (짧으면 반복, 길면 잘라서 사용)
-3. 다운로드 경로: `C:\Users\hyeji\Downloads\쇼핑쇼츠\bgm\` 폴더에 저장
+3. 다운로드 경로: `C:\Users\hyeji\Downloads\bgm\` 폴더에 저장
 4. 해당 폴더에 이미 곡이 있으면 영상 길이에 가장 가까운 곡을 자동 선택
 5. 볼륨 25%, 끝에서 1.7초 전부터 fade out
 
