@@ -218,10 +218,25 @@ python coupang_deeplink.py "제품 키워드"
 - Search API: 1시간 최대 10회 호출
 - HMAC 인증 (CEA algorithm=HmacSHA256)
 
-#### 인포크링크 등록 (수동)
-- 인포크링크는 공개 API가 없어 자동화 불가
-- 생성된 딥링크를 복사하여 link.inpock.co.kr 에서 수동 등록
-- 향후 API 제공 시 자동화 추가 예정
+#### 인포크링크 자동 등록 (Playwright 브라우저 자동화)
+- 인포크링크는 공개 API가 없으므로 Playwright로 브라우저 자동화
+- 첫 실행 시 로그인 필요 (카카오/네이버/구글) → 이후 세션 유지
+- 로그인 세션: `~/.inpock_session/state.json`
+
+```bash
+# 쿠팡 딥링크 생성 후 자동으로 인포크링크에 등록
+python inpock_register.py "상품명" "https://link.coupang.com/딥링크URL"
+```
+
+워크플로우:
+1. 인포크링크 접속 → 로그인 확인 (세션 있으면 자동)
+2. 편집 페이지 이동
+3. "블록 추가" → "링크 블록" 선택
+4. URL 입력 (쿠팡 딥링크) → 제목/이미지 자동 로드
+5. 제목을 "🛒 상품명"으로 커스텀
+6. 저장
+
+자동 등록 실패 시 브라우저가 열린 채로 수동 등록 안내
 
 ## 주의사항
 
