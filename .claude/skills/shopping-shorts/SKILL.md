@@ -192,6 +192,37 @@ ffmpeg -nostdin -y \
 - ㅋㅋ, ;; 등 자연스러운 반응 포함
 - 마지막에 질문/답글 유도
 
+### 7단계: 쿠팡파트너스 딥링크 자동 생성
+
+영상의 제품 키워드로 쿠팡파트너스 API를 호출하여 어필리에이트 딥링크를 자동 생성한다.
+
+#### 환경변수 설정 (로컬 PC에서 1회만)
+```powershell
+# Windows PowerShell
+[System.Environment]::SetEnvironmentVariable("COUPANG_ACCESS_KEY", "your-access-key", "User")
+[System.Environment]::SetEnvironmentVariable("COUPANG_SECRET_KEY", "your-secret-key", "User")
+```
+
+#### 워크플로우
+1. 제품명/키워드로 쿠팡 상품 검색 (Search API, GET)
+2. 최적 상품 자동 선택 (첫 번째 결과 또는 사용자 선택)
+3. 딥링크 생성 (Deeplink API, POST)
+4. 6단계에서 생성한 설명글에 `🛒 구매링크: {딥링크}` 자동 삽입
+
+#### 스크립트
+```bash
+python coupang_deeplink.py "제품 키워드"
+```
+
+#### API 제한
+- Search API: 1시간 최대 10회 호출
+- HMAC 인증 (CEA algorithm=HmacSHA256)
+
+#### 인포크링크 등록 (수동)
+- 인포크링크는 공개 API가 없어 자동화 불가
+- 생성된 딥링크를 복사하여 link.inpock.co.kr 에서 수동 등록
+- 향후 API 제공 시 자동화 추가 예정
+
 ## 주의사항
 
 ### delogo 좌표 규칙
