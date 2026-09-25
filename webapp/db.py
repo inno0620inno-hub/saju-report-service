@@ -149,3 +149,15 @@ def get_order(order_id: int):
     with get_conn() as conn:
         row = conn.execute("SELECT * FROM orders WHERE id=?", (order_id,)).fetchone()
         return dict(row) if row else None
+
+
+def get_recent_orders(limit: int = 40):
+    """
+    상태와 무관하게 최근 신청 순으로 반환. 채팅 상담용 화면(/admin/consult/{id})을
+    주문번호를 몰라도 클릭 한 번으로 열 수 있도록 관리자 페이지에 표시하는 용도.
+    """
+    with get_conn() as conn:
+        rows = conn.execute("""
+            SELECT * FROM orders ORDER BY created_at DESC LIMIT ?
+        """, (limit,)).fetchall()
+        return [dict(r) for r in rows]

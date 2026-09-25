@@ -36,6 +36,8 @@ from notify import send_email_with_pdf, send_kakao_alimtalk, send_telegram_messa
 sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
 from generate_report import generate_full_report, call_ai_for_section  # noqa: E402
 from report_prompts import PRODUCTS, PRODUCTS_BY_ID  # noqa: E402
+from saju_core import calculate_saju  # noqa: E402
+from build_report import render_pillar_cards, render_oheng_bars, render_daeun_steps  # noqa: E402
 
 OUTPUT_DIR = os.environ.get("OUTPUT_DIR", "generated_reports")
 os.makedirs(OUTPUT_DIR, exist_ok=True)
@@ -90,6 +92,16 @@ def verify_admin(credentials: HTTPBasicCredentials = Depends(security)):
             headers={"WWW-Authenticate": "Basic"},
         )
     return credentials.username
+
+
+STATUS_LABELS = {
+    "awaiting_payment": "입금대기",
+    "pending": "처리대기",
+    "processing": "처리중",
+    "sent": "발송완료",
+    "failed": "발송실패",
+    "cancelled": "취소됨",
+}
 
 
 # ---------------------------------------------------------------------------
@@ -214,12 +226,176 @@ def get_order_status(order_id: int):
 
 
 # ---------------------------------------------------------------------------
+# 상담용 화면 — 카톡 등으로 고객과 실시간 채팅 상담을 할 때, PDF/이메일과는
+# 별개로 사주 핵심 정보(팔자·오행·대운)를 폰 화면에서 바로 참고할 수 있게
+# 하는 뷰. AI 해석문은 재생성하지 않는다(시간·비용 때문에) — 순수 계산
+# 결과만 즉시 보여준다. 결제 여부와 무관하게 어떤 상태의 주문이든 열 수
+# 있다(상담이 결제 전에 필요한 경우도 있으므로).
+# ---------------------------------------------------------------------------
+
+def _order_to_saju_data(order: dict) -> dict:
+    y, m, d = order["birth_date"].split("-")
+    if order["time_unknown"]:
+        hour, minute = 12, 0
+    else:
+        hour, minute = order["birth_time"].split(":")
+    return calculate_saju(int(y), int(m), int(d), int(hour), int(minute), gender=order["gender"])
+
+
+def render_consult_html(order: dict, data: dict) -> str:
+    y, m, d = order["birth_date"].split("-")
+    if order["time_unknown"]:
+        birth_str = f"{int(y)}년 {int(m)}월 {int(d)}일생 · 시간모름(정오 기준 계산)"
+    else:
+        hh, mm = order["birth_time"].split(":")
+        birth_str = f"{int(y)}년 {int(m)}월 {int(d)}일 {int(hh)}시 {int(mm)}분생"
+    gender_label = "남" if order["gender"] == "M" else "여"
+    product_name = PRODUCTS_BY_ID.get(order["product_id"], {}).get("name", order["product_id"])
+    created_str = order["created_at"][:16].replace("T", " ")
+    status = order["status"]
+    status_label = STATUS_LABELS.get(status, status)
+
+    top_oheng = max(data["oheng_distribution"], key=data["oheng_distribution"].get)
+
+    daeun_card = ""
+    if "daeun" in data:
+        daeun_card = f"""
+  <div class="card">
+    <div class="section-title">대운 타임라인</div>
+    <div class="daeun-sub">{data['daeun']['direction']} · {data['daeun']['daeun_start_age']}세부터 시작</div>
+    <div class="daeun-timeline">
+      {render_daeun_steps(data)}
+    </div>
+  </div>"""
+
+    return f"""<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{order['name']}님 상담 노트 · 금빛 사주명식</title>
+<style>
+  * {{ box-sizing:border-box; margin:0; padding:0; }}
+  body {{
+    font-family:-apple-system, BlinkMacSystemFont, 'Noto Sans KR', sans-serif;
+    background:#16140F; color:#F3EDE0; padding:18px 16px 50px;
+    -webkit-text-size-adjust:100%;
+  }}
+  a {{ color:#D4AF5A; }}
+  .topbar {{ display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; font-size:13px; }}
+  .topbar a {{ color:#C9C0AC; text-decoration:none; }}
+  .card {{
+    background:#201D17; border:1px solid rgba(184,146,63,0.3); border-radius:12px;
+    padding:18px; margin-bottom:14px;
+  }}
+  .header-card .name {{ font-size:21px; font-weight:700; color:#F3EDE0; margin-bottom:6px; }}
+  .header-card .meta {{ font-size:13.5px; color:#C9C0AC; line-height:1.7; }}
+  .badge {{
+    display:inline-block; font-size:11px; padding:3px 10px; border-radius:20px;
+    font-weight:700; margin-left:6px; vertical-align:middle;
+  }}
+  .badge-awaiting_payment {{ background:rgba(217,108,108,0.18); color:#E08A8A; }}
+  .badge-pending, .badge-processing {{ background:rgba(184,146,63,0.2); color:#D4AF5A; }}
+  .badge-sent {{ background:rgba(76,122,82,0.22); color:#8FC496; }}
+  .badge-failed {{ background:rgba(217,108,108,0.22); color:#E08A8A; }}
+  .badge-cancelled {{ background:rgba(255,255,255,0.08); color:#888; }}
+
+  .section-title {{ font-size:12.5px; letter-spacing:0.1em; color:#B8923F; text-transform:uppercase; margin-bottom:12px; font-weight:700; }}
+
+  .daymaster-line {{ font-size:14px; color:#E7E1D2; line-height:1.6; margin-top:14px; }}
+  .daymaster-line b {{ color:#D4AF5A; }}
+
+  .myeongsik {{ display:grid; grid-template-columns:1fr 1fr; gap:10px; }}
+  .pillar-card {{
+    background:#16140F; border:1px solid rgba(184,146,63,0.25); border-radius:8px;
+    padding:14px 8px; text-align:center;
+  }}
+  .pillar-label {{ font-size:11px; color:#9C9585; letter-spacing:0.08em; margin-bottom:10px; }}
+  .pillar-char {{ font-family:'Noto Serif KR', serif; font-size:28px; font-weight:700; line-height:1.35; }}
+  .pillar-hanja {{ font-size:11.5px; color:#9C9585; margin-top:6px; }}
+  .oheng-목 {{ color:#7FB386; }} .oheng-화 {{ color:#E0685A; }} .oheng-토 {{ color:#EAC766; }}
+  .oheng-금 {{ color:#EDEAE0; }} .oheng-수 {{ color:#8FAEDA; }}
+
+  .oheng-row {{ display:flex; align-items:center; margin-bottom:13px; }}
+  .oheng-row:last-child {{ margin-bottom:0; }}
+  .oheng-name {{ width:66px; font-size:15px; color:#F3EDE0; display:flex; align-items:center; flex-shrink:0; }}
+  .oheng-badge {{
+    display:inline-flex; align-items:center; justify-content:center;
+    width:24px; height:24px; border:1.5px solid; border-radius:50%;
+    font-family:'Noto Serif KR', serif; font-size:12px; font-weight:700;
+    background:rgba(0,0,0,0.2); flex-shrink:0;
+  }}
+  .oheng-name-kr {{ margin-left:6px; }}
+  .oheng-track-cell {{ flex:1; padding:0 10px; min-width:0; }}
+  .oheng-track {{ height:13px; background:rgba(243,237,224,0.08); border:1px solid rgba(243,237,224,0.06); border-radius:8px; overflow:hidden; }}
+  .oheng-fill {{ height:100%; border-radius:8px; }}
+  .oheng-count {{ width:58px; font-size:13px; color:#C9C0AC; text-align:right; flex-shrink:0; white-space:nowrap; }}
+  .oheng-pct {{ display:block; font-size:10px; color:#8C8676; }}
+
+  .daeun-sub {{ font-size:12.5px; color:#C9C0AC; margin-bottom:12px; }}
+  .daeun-timeline {{ display:flex; gap:8px; overflow-x:auto; padding-bottom:4px; -webkit-overflow-scrolling:touch; }}
+  .daeun-step {{
+    flex:0 0 auto; min-width:60px; text-align:center; background:#16140F;
+    border:1px solid rgba(184,146,63,0.2); border-radius:8px; padding:10px 6px;
+  }}
+  .daeun-age {{ font-size:10.5px; color:#9C9585; margin-bottom:6px; }}
+  .daeun-gz {{ font-family:'Noto Serif KR', serif; font-size:17px; font-weight:700; }}
+
+  .footer-note {{ font-size:11px; color:#665F51; text-align:center; margin-top:22px; line-height:1.6; }}
+</style>
+</head>
+<body>
+  <div class="topbar">
+    <a href="/admin">&larr; 관리자 페이지</a>
+    <a href="javascript:location.reload()">새로고침</a>
+  </div>
+
+  <div class="card header-card">
+    <div class="name">{order['name']}님 <span class="badge badge-{status}">{status_label}</span></div>
+    <div class="meta">
+      {birth_str} · {gender_label} · {order['phone']}<br>
+      {product_name} · 신청 {created_str}
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="section-title">사주 원국 · 여덟 글자</div>
+    <div class="myeongsik">
+      {render_pillar_cards(data)}
+    </div>
+    <div class="daymaster-line">일간(본인) — <b>{data['day_master']}</b> · 가장 강한 오행 — <b>{top_oheng}</b></div>
+  </div>
+
+  <div class="card">
+    <div class="section-title">오행 분포</div>
+    {render_oheng_bars(data)}
+  </div>
+{daeun_card}
+  <div class="footer-note">이 화면은 상담 참고용입니다. 실제 발송되는 리포트는 이메일/카톡으로 전달된 PDF를 기준으로 합니다.</div>
+</body>
+</html>"""
+
+
+@app.get("/admin/consult/{order_id}", response_class=HTMLResponse)
+def admin_consult_view(order_id: int, username: str = Depends(verify_admin)):
+    order = db.get_order(order_id)
+    if not order:
+        raise HTTPException(404, "주문을 찾을 수 없습니다.")
+    try:
+        data = _order_to_saju_data(order)
+    except Exception as e:
+        raise HTTPException(500, f"사주 계산 중 오류가 발생했습니다: {e}")
+    return render_consult_html(order, data)
+
+
+# ---------------------------------------------------------------------------
 # 관리자 페이지 — 입금대기 목록 확인 + '입금확인' 버튼
 # ---------------------------------------------------------------------------
 
 @app.get("/admin", response_class=HTMLResponse)
 def admin_page(username: str = Depends(verify_admin)):
     orders = db.get_awaiting_payment_orders()
+    recent_orders = db.get_recent_orders(40)
 
     rows_html = ""
     if not orders:
@@ -241,12 +417,29 @@ def admin_page(username: str = Depends(verify_admin)):
             <form method="post" action="/admin/cancel/{o['id']}" style="display:inline-block; margin-left:6px;" onsubmit="return confirm('이 신청을 취소/삭제하시겠습니까? {o['name']}님 / {o['price']:,}원\\n(거래 불발 등으로 목록에서 제거합니다)');">
               <button type="submit" style="background:transparent; color:#D96C6C; border:1px solid #D96C6C; padding:8px 14px; border-radius:4px; font-weight:700; cursor:pointer;">취소/삭제</button>
             </form>
+            <a href="/admin/consult/{o['id']}" target="_blank" style="display:inline-block; margin-left:6px; background:transparent; color:#8FAEDA; border:1px solid #8FAEDA; padding:8px 14px; border-radius:4px; font-weight:700; text-decoration:none;">상담보기</a>
           </td>
         </tr>"""
 
     products_options = "\n".join(
         f'<option value="{p["id"]}">{p["name"]} ({p["price"]:,}원)</option>' for p in PRODUCTS
     )
+
+    recent_rows_html = ""
+    if not recent_orders:
+        recent_rows_html = "<tr><td colspan='6' style='text-align:center; padding:24px; color:#888;'>신청 내역이 없습니다.</td></tr>"
+    for o in recent_orders:
+        product = PRODUCTS_BY_ID.get(o["product_id"], {})
+        status_label = STATUS_LABELS.get(o["status"], o["status"])
+        recent_rows_html += f"""
+        <tr>
+          <td>{o['id']}</td>
+          <td>{o['name']}</td>
+          <td>{product.get('name', o['product_id'])}</td>
+          <td>{status_label}</td>
+          <td>{o['created_at'][:16].replace('T',' ')}</td>
+          <td><a href="/admin/consult/{o['id']}" target="_blank" style="background:#B8923F; color:#16140F; border:none; padding:7px 14px; border-radius:4px; font-weight:700; text-decoration:none; white-space:nowrap;">상담보기</a></td>
+        </tr>"""
 
     return f"""
     <html><head><meta charset="utf-8"><title>입금 확인 관리자 페이지</title>
@@ -266,11 +459,30 @@ def admin_page(username: str = Depends(verify_admin)):
     </style>
     </head><body>
       <h1>입금 확인 대기 목록</h1>
+
+      <div style="background:#201D17; border:1px solid rgba(143,174,218,0.35); border-radius:6px; padding:16px 20px; margin-bottom:10px; max-width:520px;">
+        <div style="font-size:13px; color:#8FAEDA; font-weight:700; margin-bottom:8px;">채팅 상담용 화면 바로 열기</div>
+        <div style="display:flex; gap:8px;">
+          <input id="consultOid" type="number" placeholder="주문번호" style="flex:1; padding:9px 10px; background:#16140F; border:1px solid #444; border-radius:4px; color:#F3EDE0; font-size:14px;">
+          <button onclick="var v=document.getElementById('consultOid').value; if(v) window.open('/admin/consult/'+v, '_blank');" style="background:#8FAEDA; color:#16140F; border:none; padding:9px 16px; border-radius:4px; font-weight:700; cursor:pointer;">열기</button>
+        </div>
+        <div style="font-size:12px; color:#999; margin-top:8px;">주문번호를 모르면 아래 '최근 신청 전체' 목록에서 '상담보기'를 눌러도 됩니다. 결제 전 주문도 열 수 있어요.</div>
+      </div>
+
       <p style="color:#999;">은행 앱에서 입금자명·금액을 직접 확인하신 후, 일치하는 주문의 '입금확인' 버튼을 눌러주세요.
       버튼을 누르면 시스템은 별도 검증 없이 바로 리포트 생성·발송을 시작합니다.</p>
       <table>
         <tr><th>ID</th><th>이름</th><th>연락처</th><th>상품</th><th>금액</th><th>신청시각</th><th>액션</th></tr>
         {rows_html}
+      </table>
+
+      <h2>최근 신청 전체 (상담용 — 상태 무관)</h2>
+      <p style="color:#999; font-size:13px;">결제 전/후, 발송 완료 여부와 상관없이 최근 신청 40건입니다. '상담보기'를 누르면
+      그 고객의 사주 핵심 정보(팔자·오행·대운) 화면이 새 탭으로 열립니다 — AI 해석문은 다시 만들지 않고 계산 결과만 즉시 보여줘서
+      빠릅니다.</p>
+      <table>
+        <tr><th>ID</th><th>이름</th><th>상품</th><th>상태</th><th>신청시각</th><th>액션</th></tr>
+        {recent_rows_html}
       </table>
 
       <h2>테스트 발송 (결제 없이, 워터마크 찍힌 샘플본)</h2>
