@@ -36,7 +36,7 @@ from notify import send_email_with_pdf, send_kakao_alimtalk, send_telegram_messa
 sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
 from generate_report import generate_full_report, call_ai_for_section  # noqa: E402
 from report_prompts import PRODUCTS, PRODUCTS_BY_ID  # noqa: E402
-from saju_core import calculate_saju  # noqa: E402
+from saju_core import calculate_saju, sipsin_between, SIPSIN_MEANING  # noqa: E402
 from build_report import render_pillar_cards, render_oheng_bars, render_daeun_steps  # noqa: E402
 
 OUTPUT_DIR = os.environ.get("OUTPUT_DIR", "generated_reports")
@@ -278,6 +278,33 @@ OHENG_TALK_WEAK = {
     "금": "결단·정리의 기운이 약한 편이에요. 맺고 끊는 게 어려울 수 있으니, 기한을 미리 정해두는 습관을 권해주세요.",
     "수": "지혜·유연함의 기운이 약한 편이에요. 변화에 적응하는 데 시간이 걸릴 수 있으니, 서두르지 말고 천천히 받아들이시라고 해주세요.",
 }
+OHENG_TALK_NEUTRAL = {
+    "목": "성장·확장의 기운이 무난하게 자리 잡고 있어요. 특별히 넘치거나 부족하지 않은 균형점이라고 보시면 됩니다.",
+    "화": "열정·표현의 기운이 무난하게 자리 잡고 있어요. 특별히 넘치거나 부족하지 않은 균형점이라고 보시면 됩니다.",
+    "토": "안정·신뢰의 기운이 무난하게 자리 잡고 있어요. 특별히 넘치거나 부족하지 않은 균형점이라고 보시면 됩니다.",
+    "금": "결단·정리의 기운이 무난하게 자리 잡고 있어요. 특별히 넘치거나 부족하지 않은 균형점이라고 보시면 됩니다.",
+    "수": "지혜·유연함의 기운이 무난하게 자리 잡고 있어요. 특별히 넘치거나 부족하지 않은 균형점이라고 보시면 됩니다.",
+}
+
+
+def render_oheng_talk(data: dict) -> str:
+    """
+    오행 분포 막대 다섯 개를 하나씩 짚어가며 설명할 수 있도록, 목화토금수
+    순서대로 전부(강한 것/약한 것뿐 아니라 중간인 것까지) 한 줄씩 멘트를 붙인다.
+    """
+    dist = data["oheng_distribution"]
+    strongest = max(dist, key=dist.get)
+    lines = []
+    for oheng in ["목", "화", "토", "금", "수"]:
+        count = dist.get(oheng, 0)
+        if count == 0:
+            talk = OHENG_TALK_WEAK.get(oheng, "")
+        elif oheng == strongest:
+            talk = OHENG_TALK_STRONG.get(oheng, "")
+        else:
+            talk = OHENG_TALK_NEUTRAL.get(oheng, "")
+        lines.append(f"<b>{oheng} ({count}개)</b> — {talk}")
+    return "<br><br>".join(lines)
 
 
 def render_consult_talk(data: dict) -> str:
@@ -305,6 +332,75 @@ def render_consult_talk(data: dict) -> str:
     return "<br><br>".join(lines)
 
 
+# 사주 원국의 각 기둥(년/월/일/시주)이 인생의 어느 영역·시기를 상징하는지에
+# 대한 전통 명리학의 통상적인 해석. 십신(SIPSIN_MEANING, saju_core.py)과
+# 합쳐서 "이 기둥은 이런 자리인데, 이 사람한테는 이런 힘으로 나타난다"는
+# 식의 한 줄 설명을 만드는 데 쓴다.
+PILLAR_POSITION_MEANING = {
+    "year_pillar": ("년주", "조상·어린 시절과, 남들 눈에 비치는 사회적 이미지를 상징해요."),
+    "month_pillar": ("월주", "부모형제와 청년기, 일하는 환경·직업운을 상징해요."),
+    "day_pillar": ("일주", "본인 자신과 배우자 자리를 상징해요 (일간이 바로 본인이에요)."),
+    "hour_pillar": ("시주", "자녀와 말년, 노후를 상징해요."),
+}
+
+
+def render_pillar_talk(data: dict) -> str:
+    day_gan_idx = data["day_pillar"]["index"] % 10
+    lines = []
+    for key in ["year_pillar", "month_pillar", "day_pillar", "hour_pillar"]:
+        label, position_talk = PILLAR_POSITION_MEANING[key]
+        if key == "day_pillar":
+            lines.append(f"<b>{label}</b> — {position_talk}")
+            continue
+        other_idx = data[key]["index"] % 10
+        sipsin = sipsin_between(day_gan_idx, other_idx)
+        meaning = SIPSIN_MEANING.get(sipsin, "")
+        lines.append(f"<b>{label}</b> — {position_talk} 이 자리에 <b>{sipsin}</b>이 있어서, {meaning}의 기운으로 나타나요.")
+    return "<br><br>".join(lines)
+
+
+def render_consult_daeun_steps(data: dict) -> str:
+    """
+    build_report.render_daeun_steps와 달리(PDF용, 간지만 표시), 각 대운
+    구간이 일간 기준으로 어떤 십신에 해당하는지까지 짧게 태그로 붙여서
+    보여준다 — 상담 중에 "이 시기는 이런 기운이에요"라고 바로 말할 수 있게.
+    """
+    day_gan_idx = data["day_pillar"]["index"] % 10
+    steps = data["daeun"]["steps"][:6]
+    out = []
+    for s in steps:
+        oheng = s["detail"]["gan_oheng"]
+        other_idx = s["detail"]["index"] % 10
+        sipsin = sipsin_between(day_gan_idx, other_idx) or ""
+        out.append(f"""
+        <div class="daeun-step">
+          <div class="daeun-age">{s['age_start']}~{s['age_end']}세</div>
+          <div class="daeun-gz oheng-{oheng}">{s['ganzhi']}</div>
+          <div class="daeun-sipsin">{sipsin}</div>
+        </div>""")
+    return "\n".join(out)
+
+
+def render_daeun_talk(data: dict) -> str:
+    """
+    대운 타임라인 아래에, 각 구간을 한 줄씩 완결된 문장으로 풀어서 —
+    태그(십신 이름)만 보고도 바로 "이 시기는 이런 기운이에요"라고
+    읽어드릴 수 있게 만든다.
+    """
+    day_gan_idx = data["day_pillar"]["index"] % 10
+    steps = data["daeun"]["steps"][:6]
+    lines = []
+    for s in steps:
+        other_idx = s["detail"]["index"] % 10
+        sipsin = sipsin_between(day_gan_idx, other_idx) or ""
+        meaning = SIPSIN_MEANING.get(sipsin, "")
+        lines.append(
+            f"<b>{s['age_start']}~{s['age_end']}세 ({s['ganzhi']})</b> — "
+            f"<b>{sipsin}</b> 운이에요. {meaning}의 기운이 들어오는 시기라고 보시면 됩니다."
+        )
+    return "<br><br>".join(lines)
+
+
 def render_consult_html(order: dict, data: dict) -> str:
     y, m, d = order["birth_date"].split("-")
     if order["time_unknown"]:
@@ -325,10 +421,11 @@ def render_consult_html(order: dict, data: dict) -> str:
         daeun_card = f"""
   <div class="card">
     <div class="section-title">대운 타임라인</div>
-    <div class="daeun-sub">{data['daeun']['direction']} · {data['daeun']['daeun_start_age']}세부터 시작</div>
+    <div class="daeun-sub">{data['daeun']['direction']} · {data['daeun']['daeun_start_age']}세부터 시작 · 각 구간 아래 태그는 일간 기준 십신이에요</div>
     <div class="daeun-timeline">
-      {render_daeun_steps(data)}
+      {render_consult_daeun_steps(data)}
     </div>
+    <div class="pillar-talk">{render_daeun_talk(data)}</div>
   </div>"""
 
     return f"""<!DOCTYPE html>
@@ -383,6 +480,9 @@ def render_consult_html(order: dict, data: dict) -> str:
   .oheng-목 {{ color:#7FB386; }} .oheng-화 {{ color:#E0685A; }} .oheng-토 {{ color:#EAC766; }}
   .oheng-금 {{ color:#EDEAE0; }} .oheng-수 {{ color:#8FAEDA; }}
 
+  .pillar-talk {{ margin-top:14px; padding-top:14px; border-top:1px solid rgba(184,146,63,0.15); font-size:13.5px; color:#C9C0AC; line-height:1.7; }}
+  .pillar-talk b {{ color:#D4AF5A; }}
+
   .oheng-row {{ display:flex; align-items:center; margin-bottom:13px; }}
   .oheng-row:last-child {{ margin-bottom:0; }}
   .oheng-name {{ width:66px; font-size:15px; color:#F3EDE0; display:flex; align-items:center; flex-shrink:0; }}
@@ -407,6 +507,7 @@ def render_consult_html(order: dict, data: dict) -> str:
   }}
   .daeun-age {{ font-size:10.5px; color:#9C9585; margin-bottom:6px; }}
   .daeun-gz {{ font-family:'Noto Serif KR', serif; font-size:17px; font-weight:700; }}
+  .daeun-sipsin {{ font-size:10px; color:#8FAEDA; margin-top:5px; }}
 
   .footer-note {{ font-size:11px; color:#665F51; text-align:center; margin-top:22px; line-height:1.6; }}
 </style>
@@ -436,11 +537,13 @@ def render_consult_html(order: dict, data: dict) -> str:
       {render_pillar_cards(data)}
     </div>
     <div class="daymaster-line">일간(본인) — <b>{data['day_master']}</b> · 가장 강한 오행 — <b>{top_oheng}</b></div>
+    <div class="pillar-talk">{render_pillar_talk(data)}</div>
   </div>
 
   <div class="card">
     <div class="section-title">오행 분포</div>
     {render_oheng_bars(data)}
+    <div class="pillar-talk">{render_oheng_talk(data)}</div>
   </div>
 {daeun_card}
   <div class="footer-note">이 화면은 상담 참고용입니다. 실제 발송되는 리포트는 이메일/카톡으로 전달된 PDF를 기준으로 합니다.</div>
