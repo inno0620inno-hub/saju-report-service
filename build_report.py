@@ -39,19 +39,35 @@ ASSETS_DIR = os.path.join(SCRIPT_DIR, "report_assets")
 # 못해서 배경색이 그냥 안 먹는 문제가 있었다. 그래서 오행 막대그래프처럼
 # 파이썬에서 동적으로 색을 꽂아 넣는 곳은 var() 대신 실제 hex 값을 직접 쓴다.
 OHENG_COLOR_HEX = {"목": "#4C7A52", "화": "#B03A2E", "토": "#C9A227", "금": "#C9C4B4", "수": "#3A5A8C"}
+# 오행 바를 그라데이션으로 칠할 때 쓰는, 각 색의 밝은 버전(입체감/윤기를 위함).
+OHENG_COLOR_LIGHT = {"목": "#7FB386", "화": "#E0685A", "토": "#EAC766", "금": "#EDEAE0", "수": "#6E93C2"}
+OHENG_HANJA = {"목": "木", "화": "火", "토": "土", "금": "金", "수": "水"}
 HANJA_NUMERALS = ["一", "二", "三", "四", "五", "六", "七", "八", "九", "十",
                    "十一", "十二", "十三", "十四", "十五", "十六", "十七", "十八", "十九", "二十",
                    "二十一", "二十二", "二十三", "二十四", "二十五", "二十六", "二十七", "二十八", "二十九", "三十"]
 
-# 페이지 본문 여백(모든 본문 페이지에 동일하게 적용됨 — wkhtmltopdf 자체 여백 기능 사용)
-# 사용자 피드백: 이 여백(20mm)은 원래 그대로 유지하고, 텍스트/카드/그래프 등
-# "모든" 요소가 항상 이 여백만큼만 페이지 가장자리에서 떨어지도록(더 넓게도,
-# 더 좁게도 하지 않고 전부 동일하게) 통일한다. 답답해 보이는 느낌은 여백이
-# 아니라 글자 크기를 키워서 해결한다.
+# 페이지 크기: 9:16 비율(세로형). wkhtmltopdf는 --page-size 프리셋(A4 등) 대신
+# --page-width/--page-height로 임의 비율을 지정할 수 있다. 가로 220mm 기준으로
+# 잡아야 여백 15mm씩을 빼도 본문 폭이 190mm 정도 남아 사주 원국 카드 4개 등이
+# 안 깨진다(가로가 더 좁으면 카드가 글자 크기 대비 너무 좁아져 겹치거나
+# 넘칠 수 있음).
+PAGE_WIDTH = "220mm"
+PAGE_HEIGHT = "391.11mm"  # 220mm * 16/9
+
+# 페이지 본문 여백.
+# 중요: wkhtmltopdf의 --margin-left/right는 "빈 공간"이라서 본문 배경색(어두운
+# 색)이 거기까지 안 칠해지고 페이지 가장자리에 흰 여백이 남는다. 그런데
+# 사용자가 실제로 보는 건 "어두운 화면(박스)" 자체이고, 그 화면의 왼쪽/오른쪽
+# 끝에 글자가 딱 붙어 있는 게 문제라고 지적함. 그래서 왼쪽/오른쪽은
+# wkhtmltopdf 여백을 0으로 없애서 어두운 배경이 페이지 가장자리까지 꽉
+# 채우게(풀블리드) 하고, 대신 그 안에서 CSS padding으로 15mm를 줘서 배경색
+# 자체의 가장자리와 글자 사이에 여백이 생기게 한다(template_body.html의
+# body { padding-left/right: 15mm } 참고). 위/아래는 기존 방식(페이지 번호
+# 자리 확보) 그대로 유지.
 BODY_MARGIN_TOP = "22mm"
 BODY_MARGIN_BOTTOM = "22mm"
-BODY_MARGIN_LEFT = "20mm"
-BODY_MARGIN_RIGHT = "20mm"
+BODY_MARGIN_LEFT = "0"
+BODY_MARGIN_RIGHT = "0"
 
 WATERMARK_DIV = (
     '<div class="watermark"><div class="watermark-mark">SAMPLE · 미리보기</div></div>'
@@ -75,19 +91,70 @@ def render_pillar_cards(data):
 
 def render_oheng_bars(data):
     dist = data["oheng_distribution"]
+    total = sum(dist.values()) or 1
     max_count = max(dist.values()) if max(dist.values()) > 0 else 1
     rows = []
     for name in ["목", "화", "토", "금", "수"]:
         count = dist[name]
-        pct = int(count / max_count * 100) if max_count else 0
+        bar_pct = int(count / max_count * 100) if max_count else 0
+        share_pct = round(count / total * 100)
         color_hex = OHENG_COLOR_HEX[name]
+        light_hex = OHENG_COLOR_LIGHT[name]
+        hanja = OHENG_HANJA[name]
+        # 주의: 이 렌더링 엔진(wkhtmltopdf 패치 빌드)은 linear-gradient()를
+        # 문법(각도/방향 키워드, 퍼센트 스탑 유무)에 관계없이 전부 지원하지
+        # 않는다 — 실측 결과 background 선언 자체가 통째로 사라진다.
+        # 그래서 그라데이션 대신 "단색 + box-shadow 글로우 + 밝은색 얇은
+        # 하이라이트 테두리"로 입체감을 낸다(둘 다 렌더링 확인됨).
         rows.append(f"""
         <div class="oheng-row">
-          <div class="oheng-name">{name}</div>
-          <div class="oheng-track-cell"><div class="oheng-track"><div class="oheng-fill" style="width:{pct}%; background:{color_hex};"></div></div></div>
-          <div class="oheng-count">{count}</div>
+          <div class="oheng-name">
+            <span class="oheng-badge" style="border-color:{color_hex}; color:{color_hex};">{hanja}</span>
+            <span class="oheng-name-kr">{name}</span>
+          </div>
+          <div class="oheng-track-cell"><div class="oheng-track"><div class="oheng-fill" style="width:{bar_pct}%; background:{color_hex}; box-shadow:0 0 12px 1px {color_hex}99, inset 0 2px 0 {light_hex}66;"></div></div></div>
+          <div class="oheng-count">{count}개<span class="oheng-pct">{share_pct}%</span></div>
         </div>""")
     return "\n".join(rows)
+
+
+# 오행 분포 페이지가 막대그래프만으로 끝나면 여백이 휑해 보인다는 피드백에 따라,
+# 가장 강한/약한 오행을 짚어주는 해설 문단을 그래프 아래에 덧붙인다.
+OHENG_MEANING_STRONG = {
+    "목": "성장과 확장의 기운이 두드러집니다. 새로운 일을 벌이고 키워나가는 추진력이 강점으로 작용합니다.",
+    "화": "열정과 표현의 기운이 두드러집니다. 에너지와 추진력이 강점이지만, 급하게 몰아붙이지 않도록 완급 조절이 필요합니다.",
+    "토": "안정과 신뢰의 기운이 두드러집니다. 묵묵히 중심을 잡는 힘이 강점으로 작용합니다.",
+    "금": "결단과 정리의 기운이 두드러집니다. 맺고 끊는 판단력이 강점이지만, 지나치게 날카로워지지 않도록 유연함을 곁들이는 것이 좋습니다.",
+    "수": "지혜와 유연함의 기운이 두드러집니다. 상황 판단이 빠르고 적응력이 뛰어난 것이 강점입니다.",
+}
+OHENG_MEANING_WEAK = {
+    "목": "성장과 확장의 기운이 상대적으로 약한 편입니다. 새로운 시도를 미루는 경향이 있을 수 있으니, 작은 것부터 시작해보는 것을 권합니다.",
+    "화": "표현과 열정의 기운이 상대적으로 약한 편입니다. 속마음을 잘 드러내지 않는 편일 수 있으니, 의식적으로 표현하는 연습이 도움이 됩니다.",
+    "토": "안정과 신뢰의 기운이 상대적으로 약한 편입니다. 마음이 쉽게 흔들릴 수 있으니, 자신만의 루틴을 만들어 중심을 잡는 것이 좋습니다.",
+    "금": "결단과 정리의 기운이 상대적으로 약한 편입니다. 맺고 끊는 것이 어려울 수 있으니, 기한을 미리 정해두는 습관을 권합니다.",
+    "수": "지혜와 유연함의 기운이 상대적으로 약한 편입니다. 변화에 적응하는 데 시간이 걸릴 수 있으니, 서두르지 않고 천천히 받아들이는 태도가 도움이 됩니다.",
+}
+
+
+def _render_oheng_talk(data):
+    dist = data["oheng_distribution"]
+    strongest = max(dist, key=dist.get)
+    weakest = min(dist, key=dist.get)
+    lines = [
+        f"오행 중에서는 {strongest}의 기운이 가장 강하게 나타납니다. "
+        f"{OHENG_MEANING_STRONG.get(strongest, '')}"
+    ]
+    if dist[weakest] == 0 or weakest != strongest:
+        lines.append(
+            f"반대로 {weakest}의 기운은 상대적으로 가장 약하게 나타납니다. "
+            f"{OHENG_MEANING_WEAK.get(weakest, '')}"
+        )
+    lines.append(
+        "오행은 어느 한쪽이 강하거나 약하다고 해서 좋고 나쁜 것이 아니라, "
+        "타고난 균형의 특징을 보여주는 지표입니다. 강한 기운은 자연스러운 강점으로 "
+        "살리고, 약한 기운은 의식적으로 보완해나가는 것이 좋습니다."
+    )
+    return "\n\n".join(lines)
 
 
 def render_daeun_steps(data):
@@ -182,9 +249,14 @@ def _render_pillars_block(data, chapter_num_str, marker_id, watermark=False):
     f"{max(data['oheng_distribution'], key=data['oheng_distribution'].get)}의 기운이 상대적으로 "
     "강하게 나타나며, 이는 이후 섹션에서 다루는 성격과 흐름의 바탕이 됩니다.")}</p>
   </div>
-  <div class="chapter-title-sub" style="margin-top:36px; font-size:22px;">오행(五行) 분포</div>
-  <div class="oheng-bars">
+</div>
+<div class="section-break">
+  <div class="chapter-title-sub" style="margin-top:0; font-size:44px;">오행(五行) 분포</div>
+  <div class="oheng-panel">
     {render_oheng_bars(data)}
+  </div>
+  <div class="body-text" style="margin-top:40px;">
+    {paragraphs(_render_oheng_talk(data))}
   </div>
 </div>"""
 
@@ -353,7 +425,7 @@ def build_report(data, name, birth_info, sections, section_order=None,
 
         _run_wkhtmltopdf([
             "--encoding", "utf-8", "--enable-local-file-access",
-            "--page-size", "A4",
+            "--page-width", PAGE_WIDTH, "--page-height", PAGE_HEIGHT,
             "--margin-top", "0", "--margin-bottom", "0",
             "--margin-left", "0", "--margin-right", "0",
             "-q", cover_html_path, cover_pdf_path,
@@ -367,7 +439,7 @@ def build_report(data, name, birth_info, sections, section_order=None,
         footer_path = os.path.join(ASSETS_DIR, "footer.html")
         _run_wkhtmltopdf([
             "--encoding", "utf-8", "--enable-local-file-access",
-            "--page-size", "A4",
+            "--page-width", PAGE_WIDTH, "--page-height", PAGE_HEIGHT,
             "--margin-top", BODY_MARGIN_TOP, "--margin-bottom", BODY_MARGIN_BOTTOM,
             "--margin-left", BODY_MARGIN_LEFT, "--margin-right", BODY_MARGIN_RIGHT,
             "-q", body_pass1_html_path,
@@ -389,7 +461,7 @@ def build_report(data, name, birth_info, sections, section_order=None,
 
         _run_wkhtmltopdf([
             "--encoding", "utf-8", "--enable-local-file-access",
-            "--page-size", "A4",
+            "--page-width", PAGE_WIDTH, "--page-height", PAGE_HEIGHT,
             "--margin-top", BODY_MARGIN_TOP, "--margin-bottom", BODY_MARGIN_BOTTOM,
             "--margin-left", BODY_MARGIN_LEFT, "--margin-right", BODY_MARGIN_RIGHT,
             "--page-offset", "1",
