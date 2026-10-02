@@ -138,6 +138,26 @@
       background: linear-gradient(to top, rgba(5,4,3,.97) 60%, transparent); }
   .cta-fixed .btn { margin: 0; }
   .cta-fixed { padding-top: 26px; }
+
+  /* ===== 인트로 (금빛 문장 + 타이틀) ===== */
+  .intro-bg { position: absolute; inset: 0; background: radial-gradient(70% 45% at 50% 38%, rgba(212,175,90,.22), transparent 70%), linear-gradient(to bottom, rgba(0,0,0,.35), rgba(0,0,0,.78)); }
+  .center.low { justify-content: flex-end; padding-bottom: 8vh; }
+  .crest { position: relative; width: 132px; height: 132px; margin-bottom: 30px; display: flex; align-items: center; justify-content: center; }
+  .crest .ring { position: absolute; inset: 0; border-radius: 50%; border: 1px solid var(--gold); box-shadow: 0 0 40px rgba(212,175,90,.35), inset 0 0 30px rgba(212,175,90,.18); }
+  .crest .ring.r2 { inset: 9px; border: 1px solid rgba(212,175,90,.55); }
+  .crest .ring.r3 { inset: -14px; border: 1px dashed rgba(212,175,90,.35); animation: spin 40s linear infinite; }
+  .crest .gl { position: relative; font-family: 'Noto Serif KR', serif; font-weight: 700; font-size: 72px; line-height: 1;
+      background: linear-gradient(180deg, #fff3c4 0%, #e9c870 38%, #b8892c 70%, #f2d98b 100%); -webkit-background-clip: text; background-clip: text; color: transparent;
+      filter: drop-shadow(0 2px 14px rgba(212,175,90,.55)); }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .i-title { font-family: 'Noto Serif KR', serif; font-weight: 700; font-size: 46px; letter-spacing: .32em; text-indent: .32em; line-height: 1.2;
+      background: linear-gradient(180deg, #fff6d2 0%, #ecd07a 45%, #c79a38 100%); -webkit-background-clip: text; background-clip: text; color: transparent;
+      filter: drop-shadow(0 2px 12px rgba(0,0,0,.6)); }
+  .i-sub { display: flex; align-items: center; justify-content: center; gap: 14px; margin-top: 14px; font-family: 'Noto Serif KR', serif; font-size: 18px; letter-spacing: .6em; text-indent: .6em; color: #f1dca0; }
+  .i-sub::before, .i-sub::after { content: ''; width: 38px; height: 1px; background: linear-gradient(90deg, transparent, var(--gold)); }
+  .i-sub::after { background: linear-gradient(270deg, transparent, var(--gold)); }
+  .i-who { margin-top: 26px; font-size: 13px; letter-spacing: .12em; color: rgba(239,230,207,.7); }
+  .i-tap { margin-top: 36px; font-size: 12px; letter-spacing: .3em; color: var(--gold-soft); animation: pulse 2.2s ease-in-out infinite; }
   .disclaimer { font-size: 11px; opacity: .5; margin-top: 18px; line-height: 1.6; }
 </style>
 </head>
@@ -174,7 +194,7 @@ let idx = 0; const history = []; let HAS_IMG = false;
 
 /* ===== 질문 흐름 (문구는 금빛도사 말투: 존댓말 + 의표를 찌르는 직설) ===== */
 const STEPS = [
-  { type:'intro' },
+  { type:'intro', seal:false },
   { type:'choice', bg:'assets/study_door_1.jpg', seal:false, eyebrow:'고요한 서재, 금빛 향이 피어오릅니다', line:'발걸음이 멈춘 이유를,<br>저는 알고 있습니다.', opts:['…누구신가요?','여기가 어디죠?'] },
   { type:'choice', seal:false, eyebrow:'금빛도사', line:'사주를 보러 오신 게 아니지요.<br>이미 정해 둔 답을 확인받으러 오셨습니다.', opts:['…뜨끔하네요','아닌데요?'] },
   { type:'radio', key:'who', blur:true, line:'누구의 운명을<br>펼쳐 볼까요?', opts:['본인','가족','연인','친구','기타'] },
@@ -237,10 +257,12 @@ function render() {
 
 const R = {
   intro() {
-    view.innerHTML = `<div class="center fade" id="introTap">
-      <div class="hanja">金빛</div>
-      <div class="t">금빛 사주명식<br>금빛도사의 방</div>
-      <div class="s pulse">화면을 터치하세요</div></div>`;
+    view.innerHTML = `<div class="intro-bg"></div><div class="center low fade" id="introTap">
+      <div class="crest"><span class="ring r3"></span><span class="ring"></span><span class="ring r2"></span><span class="gl">金</span></div>
+      <div class="i-title">금빛</div>
+      <div class="i-sub">사주명식</div>
+      <div class="i-who">금빛도사의 방</div>
+      <div class="i-tap">화면을 터치하세요</div></div>`;
     $('#introTap').onclick = next;
   },
   choice(st) {

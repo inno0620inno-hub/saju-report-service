@@ -73,6 +73,8 @@ app.add_middleware(
 
 # 생성된 PDF를 다운로드 링크로 제공 (카카오 알림톡용)
 app.mount("/files", StaticFiles(directory=OUTPUT_DIR), name="files")
+# 금빛도사 스토리 페이지(/story)가 쓰는 이미지
+app.mount("/assets", StaticFiles(directory=os.path.join(os.path.dirname(os.path.abspath(__file__)), "assets")), name="assets")
 
 
 # ---------------------------------------------------------------------------
