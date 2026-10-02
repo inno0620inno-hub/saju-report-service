@@ -22,7 +22,7 @@ load_dotenv()  # .env 파일이 있으면 환경변수로 불러온다
 
 from fastapi import FastAPI, HTTPException, BackgroundTasks, Depends, Form
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, EmailStr, field_validator
@@ -105,6 +105,8 @@ class SubmitRequest(BaseModel):
     birth_date: str          # "YYYY-MM-DD"
     birth_time: str | None = None   # "HH:MM"
     time_unknown: bool = False
+    is_lunar: bool = False          # True면 birth_date를 음력으로 간주해 접수 시 양력으로 변환
+    is_leap_month: bool = False     # 음력 윤달 여부 (is_lunar일 때만 의미 있음)
     gender: str               # "M" or "F"
     product_id: str = "full"  # report_prompts.PRODUCTS 중 하나
     delivery_mode: str        # "immediate" or "scheduled"
@@ -144,6 +146,12 @@ class SubmitRequest(BaseModel):
 # API 엔드포인트
 # ---------------------------------------------------------------------------
 
+@app.get("/story")
+def story_page():
+    """금빛도사 스토리형 신청 페이지 (기존 /api/submit 그대로 사용)."""
+    return FileResponse(os.path.join(os.path.dirname(os.path.abspath(__file__)), "story.html"))
+
+
 @app.get("/api/products")
 def get_products():
     """랜딩페이지가 상품 목록/가격을 항상 최신으로 가져갈 수 있도록 제공."""
@@ -155,7 +163,7 @@ def on_startup():
     scheduler.start()
 
 
-def _notify_admin_new_order(order_id: int, req: "SubmitRequest"):
+def _notify_admin_new_order(order_id: int, req: "SubmitRequest", original_lunar: str | None = None):
     """신규 신청이 들어오면 관리자에게 텔레그램으로 알림을 보낸다."""
     product_name = PRODUCTS_BY_ID.get(req.product_id, {}).get("name", req.product_id)
     price = PRODUCTS_BY_ID.get(req.product_id, {}).get("price", 0)
@@ -172,10 +180,32 @@ def _notify_admin_new_order(order_id: int, req: "SubmitRequest"):
         print(f"[telegram] 신규 신청 알림 발송 실패 (order_id={order_id}): {err}")
 
 
+def _lunar_to_solar_iso(date_str: str, is_leap: bool) -> str:
+    """음력 YYYY-MM-DD(+윤달 여부)를 양력 YYYY-MM-DD로 변환. 실패 시 400."""
+    try:
+        from korean_lunar_calendar import KoreanLunarCalendar
+    except ImportError:
+        raise HTTPException(400, "음력 변환을 사용할 수 없습니다. 카카오톡 채널로 문의해주세요.")
+    try:
+        y, m, d = (int(x) for x in date_str.split("-"))
+    except ValueError:
+        raise HTTPException(400, "생년월일 형식이 올바르지 않습니다.")
+    cal = KoreanLunarCalendar()
+    if not cal.setLunarDate(y, m, d, bool(is_leap)):
+        raise HTTPException(400, "존재하지 않는 음력 날짜입니다. 월·일·윤달 여부를 다시 확인해주세요.")
+    return cal.SolarIsoFormat()
+
+
 @app.post("/api/submit")
 def submit_order(req: SubmitRequest, background_tasks: BackgroundTasks):
     if not req.time_unknown and not req.birth_time:
         raise HTTPException(400, "태어난 시간을 입력하거나 '모름'을 체크해주세요.")
+
+    # 음력으로 접수된 경우 양력으로 변환해 이후 로직(DB 저장·사주 계산)은 항상 양력 기준으로 동작
+    original_lunar = None
+    if req.is_lunar:
+        original_lunar = f"음력 {req.birth_date}{' 윤달' if req.is_leap_month else ''}"
+        req.birth_date = _lunar_to_solar_iso(req.birth_date, req.is_leap_month)
 
     scheduled_at = None
     if req.delivery_mode == "scheduled":
@@ -200,7 +230,7 @@ def submit_order(req: SubmitRequest, background_tasks: BackgroundTasks):
     # 이제 신청만으로는 처리를 시작하지 않는다. 관리자가 입금을 확인하고
     # /admin 페이지에서 '입금확인' 버튼을 눌러야 그때부터 처리가 시작된다.
 
-    background_tasks.add_task(_notify_admin_new_order, order_id, req)
+    background_tasks.add_task(_notify_admin_new_order, order_id, req, original_lunar)
 
     return {"order_id": order_id, "status": "awaiting_payment"}
 
