@@ -178,7 +178,7 @@ const SAME_ORIGIN = ['localhost', '127.0.0.1'].includes(location.hostname) || lo
 const API_BASE = window.STORY_API_BASE !== undefined ? window.STORY_API_BASE : (SAME_ORIGIN ? '' : PROD_API);
 const CHARACTER_IMG = 'assets/dosa.jpg';                 // 금빛도사 일러스트가 준비되면 여기에 저장
 const BANK = { bank: '토스뱅크', no: '1001-5571-3435', holder: '하♥진' }; // 기존 신청폼과 동일
-const KAKAO_NOTE = '궁금한 점은 카카오톡 채널로 편하게 문의해 주세요.';
+const KAKAO_NOTE = '궁금한 점은 <a href="http://pf.kakao.com/_gEISX" target="_blank" rel="noopener" style="color:var(--gold);font-weight:600">카카오톡 채널</a>로 편하게 문의해 주세요.';
 
 const FALLBACK_PRODUCTS = [
   { id: 'full', name: '종합 사주 리포트', price: 19900, description: '총론부터 대운·재물·애정·건강까지 한번에' },
@@ -205,11 +205,11 @@ const STEPS = [
   { type:'radio', key:'love', blur:'soft', bg:'assets/writing_2.jpg', eyebrow:'그렇다면', line:'연애는 쉬고 계십니까,<br>쉬는 척하고 계십니까?', opts:['솔로입니다','고민되는 사람이 있습니다','연애 중입니다','헤어진 지 얼마 안 됐습니다','결혼했습니다'] },
   { type:'radio', key:'job', blur:'soft', bg:'assets/writing_2.jpg', eyebrow:'하나만 더', line:'지금 하는 일, 마음에 드십니까?<br>대답이 늦으시다면 그것이 답입니다.', opts:['학생입니다','일을 구하고 있습니다','직장에 다닙니다','사업을 합니다','프리랜서입니다','쉬고 있습니다'] },
   { type:'concern', key:'concern', blur:'soft', bg:'assets/writing_2.jpg', line:'저에게만 털어놓고 싶은<br>고민이 있으십니까?' },
-  { type:'email', key:'email', blur:'soft', bg:'assets/writing_2.jpg', line:'마지막입니다.<br>풀이를 받으실 이메일을 알려 주십시오.', ph:'example@gmail.com' },
+  { type:'email', key:'email', blur:'soft', bg:'assets/writing_2.jpg', line:'마지막입니다.<br>풀이를 받으실 이메일을 알려 주십시오.', sub:'완성된 풀이는 이 이메일로 보내 드립니다.', ph:'example@gmail.com' },
   { type:'loading' },
   { type:'webtoon' },
   { type:'product' },
-  { type:'phone', key:'phone', line:'결과가 준비되면<br>알려 드리겠습니다.', sub:'휴대폰 번호를 입력해 주세요. 알림톡 발송에만 사용합니다.', ph:'010-0000-0000' },
+  { type:'phone', key:'phone', line:'혹시 연락드릴 일이 생길 때를<br>위해 번호를 남겨 주십시오.', sub:'휴대폰 번호는 입금 확인과 문의 응대에만 사용합니다. 풀이는 이메일로 보내 드립니다.', ph:'010-0000-0000' },
   { type:'delivery' },
   { type:'submit' },
   { type:'pay' },
@@ -439,7 +439,7 @@ const R = {
         <div class="sm" style="text-align:center">※ 맛보기 문구이며, 실제 풀이는 태어난 날·시를 기준으로 작성됩니다.</div></div>
       <div class="blk" style="padding-bottom:22px"><div class="big">금빛도사의 풀이는</div><div class="mid gold" style="margin-top:8px">이렇게 전해 드립니다</div></div>
       <ul class="list">
-        <li>PDF 가이드북으로 정리해 이메일·카카오톡으로 보내 드립니다</li>
+        <li>PDF 가이드북으로 정리해 이메일로 보내 드립니다</li>
         <li>태어난 날·시를 절기 기준으로 계산해 사주 원국부터 풀이합니다</li>
         <li>총론부터 재물·애정·건강까지, 구체적인 장면과 당부로 풀어 드립니다</li>
         <li>입금 확인 후 영업일 기준 몇 시간 ~ 1일 내외로 발송됩니다</li>
@@ -467,7 +467,7 @@ const R = {
       <div class="box"><b>${mobile ? '다른 은행 앱으로 입금하시려면' : '입금 안내'}</b><br>${BANK.bank} ${BANK.no}<br>예금주 ${esc(BANK.holder)}
         <div class="row" style="margin-top:6px"><button class="chip" id="copyAcct">계좌번호 복사</button><button class="chip" id="copyAmt">금액 복사</button></div>
         <div style="margin-top:10px">입금자명은 위에 적어 주신 성함(<b>${esc(S.name)}</b>)과 같게 해 주시면 확인이 빨라집니다.</div></div>
-      <div class="box">입금 확인 후 영업일 기준 몇 시간 ~ 1일 내외로 카카오톡·이메일로 보내 드립니다.<br>${KAKAO_NOTE}</div>
+      <div class="box">입금 확인 후 영업일 기준 몇 시간 ~ 1일 내외로 <b>${esc(S.email)}</b>로 보내 드립니다.<br>${KAKAO_NOTE}</div>
       <div class="disclaimer">본 리포트는 전통 명리학 이론을 바탕으로 한 참고용 콘텐츠이며, 의학적·법적·재정적 조언을 대체하지 않습니다.</div></div>`;
     const copy = (id, text, label) => { $(id).onclick = e => { navigator.clipboard && navigator.clipboard.writeText(text); e.target.textContent = '복사되었습니다'; setTimeout(() => e.target.textContent = label, 1500); }; };
     copy('#copyAcct', acct, '계좌번호 복사'); copy('#copyAmt', String(amount), '금액 복사');
