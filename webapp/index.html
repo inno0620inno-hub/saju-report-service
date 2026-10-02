@@ -426,7 +426,7 @@
             <div><input type="date" name="schedule_date" id="scheduleDate"></div>
             <div><input type="time" name="schedule_time" id="scheduleTime"></div>
           </div>
-          <div class="hint">한국 시간(KST) 기준으로 그 시각에 카카오톡·이메일이 발송됩니다.</div>
+          <div class="hint">한국 시간(KST) 기준으로 그 시각에 이메일로 발송됩니다.</div>
         </div>
       </div>
 
@@ -604,7 +604,7 @@
       if (!res.ok) throw new Error(data.detail || '접수 중 오류가 발생했습니다.');
 
       statusMsg.className = 'status-msg success';
-      statusMsg.textContent = `신청 접수 완료! 안내드린 계좌로 입금해주시면, 확인 후 순차적으로 리포트를 제작해 카카오톡·이메일로 보내드립니다.`;
+      statusMsg.textContent = `신청 접수 완료! 안내드린 계좌로 입금해주시면, 확인 후 순차적으로 리포트를 제작해 이메일로 보내드립니다.`;
       form.reset();
       toggleSchedule();
     } catch (err) {
