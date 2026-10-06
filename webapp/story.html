@@ -18,7 +18,7 @@
   html, body { height: 100%; background: #000; color: var(--paper); font-family: 'Noto Sans KR', sans-serif; }
   #app { position: relative; width: 100%; max-width: 480px; height: 100dvh; margin: 0 auto; overflow: hidden; background: var(--ink); }
 
-  /* 배경: 도사 일러스트(assets/dosa.jpg)가 있으면 사용, 없으면 금빛 그라데이션 */
+  /* 배경: 도사 일러스트(assets/dosa_v2.jpg)가 있으면 사용, 없으면 금빛 그라데이션 */
   .bg { position: absolute; inset: 0; background:
         radial-gradient(120% 70% at 50% 18%, rgba(212,175,90,.28), transparent 60%),
         radial-gradient(80% 50% at 50% 100%, rgba(90,60,20,.55), transparent 70%),
@@ -74,6 +74,11 @@
   .card .n { font-family: 'Noto Serif KR', serif; font-size: 16px; font-weight: 700; color: #fff7e0; }
   .card .d { font-size: 12.5px; opacity: .75; margin-top: 4px; line-height: 1.45; }
   .card .p { font-size: 15px; color: var(--gold); margin-top: 8px; font-weight: 600; }
+  .more-btn { display: block; width: 100%; margin: 14px 0 6px; padding: 15px 16px; text-align: center; cursor: pointer; border-radius: 12px;
+      border: 1.5px solid var(--gold); background: linear-gradient(180deg, rgba(212,175,90,.22), rgba(212,175,90,.08)); color: #fff1c4;
+      font-family: 'Noto Serif KR', serif; font-size: 16px; font-weight: 700; box-shadow: 0 0 18px rgba(212,175,90,.28); }
+  .more-btn b { margin-left: 8px; color: var(--gold); }
+  .more-btn small { display: block; margin-top: 4px; font-family: 'Noto Sans KR', sans-serif; font-size: 12px; font-weight: 400; color: rgba(255,241,196,.75); }
   .card.compact { padding: 11px 14px; }
   .card.compact .top { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
   .card.compact .n { font-size: 14.5px; }
@@ -106,7 +111,7 @@
   .wt .gold { color: var(--gold); }
   .wt .red { color: #ff7a5c; }
   .wt .sm { font-size: 13px; opacity: .6; margin-top: 14px; line-height: 1.6; }
-  .wt .pic { position: relative; width: 100%; background-image: url(assets/dosa.jpg); background-repeat: no-repeat; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+  .wt .pic { position: relative; width: 100%; background-image: url(assets/dosa_v2.jpg); background-repeat: no-repeat; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
   .wt .pic::after { content: ''; position: absolute; inset: 0; background: linear-gradient(to bottom, #050403 0%, transparent 18%, transparent 70%, #050403 100%); }
   .wt .bub { position: absolute; z-index: 2; background: rgba(240,230,205,.94); color: #1a1405; font-family: 'Noto Serif KR', serif; font-weight: 700; font-size: 15px;
       padding: 14px 18px; border-radius: 999px; line-height: 1.45; box-shadow: 0 6px 24px rgba(0,0,0,.5); }
@@ -119,6 +124,20 @@
   .wt .list { text-align: left; padding: 0 28px; }
   .wt .list li { list-style: none; padding: 13px 0 13px 28px; position: relative; border-bottom: 1px solid rgba(212,175,90,.18); font-size: 14.5px; line-height: 1.6; }
   .wt .list li::before { content: '金'; position: absolute; left: 0; top: 13px; color: var(--gold); font-family: 'Noto Serif KR', serif; font-size: 15px; }
+
+  /* ===== 천안(千眼) 장면: 도사의 눈 / 재물운 / 미래 연인 ===== */
+  .wt .eye { position: relative; width: 100%; aspect-ratio: 1/0.62; background: url(assets/dosa_v2.jpg) no-repeat; background-size: 250% auto; background-position: 50% 17.5%; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); overflow: hidden; }
+  .wt .eye::before { content: ''; position: absolute; inset: 0; background: radial-gradient(60% 55% at 50% 52%, rgba(255,215,120,.28), transparent 70%); mix-blend-mode: screen; animation: eyeGlow 3.2s ease-in-out infinite; }
+  .wt .eye::after { content: ''; position: absolute; inset: 0; background: linear-gradient(to bottom, #050403 0%, transparent 22%, transparent 72%, #050403 100%); }
+  @keyframes eyeGlow { 0%, 100% { opacity: .55; } 50% { opacity: 1; } }
+  .wt .hook { font-family: 'Noto Serif KR', serif; font-size: 30px; line-height: 1.5; font-weight: 700; color: #fff7e0; word-break: keep-all; text-shadow: 0 0 24px rgba(255,200,90,.45); }
+  .wt .veil { position: relative; width: 100%; aspect-ratio: 1/1.15; overflow: hidden; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line);
+      background: radial-gradient(55% 45% at 50% 42%, rgba(160,130,255,.35), transparent 72%), radial-gradient(70% 60% at 50% 55%, rgba(212,175,90,.22), transparent 75%), #07050d; }
+  .wt .veil img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: .45; }
+  .wt .veil svg { position: absolute; left: 50%; bottom: -2%; width: 78%; transform: translateX(-50%); filter: blur(6px) drop-shadow(0 0 30px rgba(170,140,255,.7)); animation: veilBreath 4.4s ease-in-out infinite; }
+  .wt .veil .mist { position: absolute; inset: 0; background: linear-gradient(to bottom, #050403 0%, transparent 20%, rgba(200,190,255,.22) 50%, #050403 100%); }
+  @keyframes veilBreath { 0%, 100% { opacity: .7; transform: translateX(-50%) scale(1); } 50% { opacity: .95; transform: translateX(-50%) scale(1.03); } }
+  .wt .veil .q { position: absolute; left: 50%; top: 30%; transform: translateX(-50%); font-family: 'Noto Serif KR', serif; font-size: 64px; color: #fff3c4; text-shadow: 0 0 20px rgba(255,210,110,.9); animation: pulse 2.4s infinite; }
 
   /* ===== 화려한 금빛 CTA (사주보기 버튼) ===== */
   .btn.royal { position: relative; overflow: hidden; padding: 19px 26px; border: 1px solid #fbeab0; border-radius: 6px; letter-spacing: .1em;
@@ -176,13 +195,22 @@
 const PROD_API = 'https://saju-report-service-production.up.railway.app';   // 기존 신청폼(index.html)과 동일한 서버
 const SAME_ORIGIN = ['localhost', '127.0.0.1'].includes(location.hostname) || location.hostname.endsWith('railway.app');
 const API_BASE = window.STORY_API_BASE !== undefined ? window.STORY_API_BASE : (SAME_ORIGIN ? '' : PROD_API);
-const CHARACTER_IMG = 'assets/dosa.jpg';                 // 금빛도사 일러스트가 준비되면 여기에 저장
+const CHARACTER_IMG = 'assets/dosa_v2.jpg';                 // 금빛도사 일러스트가 준비되면 여기에 저장
 const BANK = { bank: '토스뱅크', no: '1001-5571-3435', holder: '하♥진' }; // 기존 신청폼과 동일
 const KAKAO_NOTE = '궁금한 점은 <a href="http://pf.kakao.com/_gEISX" target="_blank" rel="noopener" style="color:var(--gold);font-weight:600">카카오톡 채널</a>로 편하게 문의해 주세요.';
 
 const FALLBACK_PRODUCTS = [
   { id: 'full', name: '종합 사주 리포트', price: 19900, description: '총론부터 대운·재물·애정·건강까지 한번에' },
   { id: 'premium', name: '프리미엄 심층 리포트', price: 39900, description: '십신·오행 심층분석 + 향후 5년 흐름까지 총망라' },
+  { id: 'new_year', name: '신년운세', price: 9900, description: '올해 한 해의 흐름을 짚어드립니다' },
+  { id: 'love', name: '연애운세', price: 7900, description: '연애 스타일과 애정운 심층 분석' },
+  { id: 'wealth', name: '재물운', price: 6900, description: '돈을 대하는 태도와 재물의 흐름' },
+  { id: 'business', name: '사업·창업운', price: 8900, description: '사업을 벌이기 좋은 시기와 방향' },
+  { id: 'career', name: '이직·취업운', price: 7900, description: '커리어 방향과 이직 타이밍' },
+  { id: 'monthly', name: '월간운세', price: 4900, description: '이번 달의 흐름만 짧고 굵게' },
+  { id: 'health', name: '건강운', price: 5900, description: '몸의 균형을 살피는 법' },
+  { id: 'study', name: '학업운', price: 6900, description: '학습 스타일과 집중이 잘 되는 시기' },
+  { id: 'children', name: '자녀운', price: 6900, description: '자녀와 관계 맺는 방식' },
 ];
 
 /* ===== 상태 ===== */
@@ -202,10 +230,10 @@ const STEPS = [
   { type:'time', blur:true, line:'태어난 시간은요?', sub:'모르셔도 괜찮습니다. 모른다는 것 또한 하나의 단서입니다.' },
   { type:'gender', key:'gender', blur:true, line:'성별은 어떻게 되십니까?' },
   { type:'text', key:'name', blur:true, line:'성함을 적어 주십시오.', sub:'이름에도 기운이 있는 법입니다. 입금자명과 같게 적어 주시면 확인이 빠릅니다.', ph:'홍길동', max:20 },
-  { type:'radio', key:'love', blur:'soft', bg:'assets/writing_2.jpg', eyebrow:'그렇다면', line:'연애는 쉬고 계십니까,<br>쉬는 척하고 계십니까?', opts:['솔로입니다','고민되는 사람이 있습니다','연애 중입니다','헤어진 지 얼마 안 됐습니다','결혼했습니다'] },
-  { type:'radio', key:'job', blur:'soft', bg:'assets/writing_2.jpg', eyebrow:'하나만 더', line:'지금 하는 일, 마음에 드십니까?<br>대답이 늦으시다면 그것이 답입니다.', opts:['학생입니다','일을 구하고 있습니다','직장에 다닙니다','사업을 합니다','프리랜서입니다','쉬고 있습니다'] },
-  { type:'concern', key:'concern', blur:'soft', bg:'assets/writing_2.jpg', line:'저에게만 털어놓고 싶은<br>고민이 있으십니까?' },
-  { type:'email', key:'email', blur:'soft', bg:'assets/writing_2.jpg', line:'마지막입니다.<br>풀이를 받으실 이메일을 알려 주십시오.', sub:'완성된 풀이는 이 이메일로 보내 드립니다.', ph:'example@gmail.com' },
+  { type:'radio', key:'love', blur:'soft', bg:'assets/writing_2_v2.jpg', eyebrow:'그렇다면', line:'연애는 쉬고 계십니까,<br>쉬는 척하고 계십니까?', opts:['솔로입니다','고민되는 사람이 있습니다','연애 중입니다','헤어진 지 얼마 안 됐습니다','결혼했습니다'] },
+  { type:'radio', key:'job', blur:'soft', bg:'assets/writing_2_v2.jpg', eyebrow:'하나만 더', line:'지금 하는 일, 마음에 드십니까?<br>대답이 늦으시다면 그것이 답입니다.', opts:['학생입니다','일을 구하고 있습니다','직장에 다닙니다','사업을 합니다','프리랜서입니다','쉬고 있습니다'] },
+  { type:'concern', key:'concern', blur:'soft', bg:'assets/writing_2_v2.jpg', line:'저에게만 털어놓고 싶은<br>고민이 있으십니까?' },
+  { type:'email', key:'email', blur:'soft', bg:'assets/writing_2_v2.jpg', line:'마지막입니다.<br>풀이를 받으실 이메일을 알려 주십시오.', sub:'완성된 풀이는 이 이메일로 보내 드립니다.', ph:'example@gmail.com' },
   { type:'loading' },
   { type:'webtoon' },
   { type:'product' },
@@ -220,7 +248,7 @@ const $ = s => document.querySelector(s);
 const view = $('#view');
 const esc = t => String(t).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 
-const DEFAULT_BG = 'assets/dosa.jpg';
+const DEFAULT_BG = 'assets/dosa_v2.jpg';
 let curBg = '';
 function swapBg(src) {                      // 배경 이미지를 페이드로 교체
   if (src === curBg) return; curBg = src;
@@ -343,7 +371,7 @@ const R = {
       const feat = products.filter(p => FEATURED.includes(p.id)), rest = products.filter(p => !FEATURED.includes(p.id));
       if (rest.some(p => p.id === S.product_id)) more = true;
       view.querySelector('.cards').innerHTML = feat.map(p => card(p, false)).join('') +
-        (rest.length ? `<button class="btn ghost" id="more" style="margin-top:12px">주제별 단일 풀이 ${rest.length}개 ${more ? '접기 ▴' : '보기 ▾'}</button>` +
+        (rest.length ? `<button class="more-btn" id="more"><span>${more ? '접기' : '다른 풀이 더보기'}</span><b>${more ? '▴' : '▾'}</b><small>${more ? '' : `신년·연애·재물·사업 등 주제별 단일 풀이 ${rest.length}가지`}</small></button>` +
           (more ? rest.map(p => card(p, true)).join('') : '') : '');
       view.querySelectorAll('.card').forEach(c => c.onclick = () => { S.product_id = c.dataset.id; draw(); });
       const mb = view.querySelector('#more'); if (mb) mb.onclick = () => { more = !more; draw(); };
@@ -371,7 +399,7 @@ const R = {
     const msgs = ['여덟 글자를 펼치는 중입니다', '오행의 균형을 가늠하는 중입니다', '대운의 흐름을 읽는 중입니다', '당신의 이야기를 정리하는 중입니다'];
     view.innerHTML = `<div class="center"><div class="hanja pulse">命</div><div class="t" id="lm">${msgs[0]}</div>
       <div class="loader"><i id="lb"></i></div></div>`;
-    const bgs = ['assets/gold_ink_1.jpg', 'assets/gold_ink_2.jpg', 'assets/book_coins_1.jpg', 'assets/gold_ink_2.jpg']; setBg('dim', false, bgs[0]);
+    const bgs = ['assets/gold_ink_1.jpg', 'assets/gold_ink_2.jpg', 'assets/book_coins_1_v2.jpg', 'assets/gold_ink_2.jpg']; setBg('dim', false, bgs[0]);
     let bi = 0; const bgt = setInterval(() => { bi = (bi + 1) % bgs.length; swapBg(bgs[bi]); }, 3000);
     let i = 0; const timer = setInterval(() => { i = (i + 1) % msgs.length; $('#lm').textContent = msgs[i]; }, 3200);
     const t0 = Date.now(), MIN = 12000;
@@ -411,17 +439,19 @@ const R = {
       '사업을 합니다':'결정을 혼자 내려야 하는 외로움을 아시는 분이군요.',
       '프리랜서입니다':'자유로운 만큼 불안도 함께 지고 가시는 분이군요.',
       '쉬고 있습니다':'쉬고 있는데도 마음은 쉬지 못하고 계시군요.' }[S.job] || '지금 하시는 일에 대해 말 못 할 생각이 있으시군요.';
+    const isSolo = ['솔로입니다','헤어진 지 얼마 안 됐습니다'].includes(S.love);
+    const whom = '그 사람';
     const pimg = (src, extra = '') => `<div class="pic im"><img src="${src}" alt="">${extra}</div>`;
     view.innerHTML = `<div class="wt" id="wt">
       <div class="blk" style="padding-top:110px"><div class="mid">${esc(S.name)}님의 여덟 글자를<br>풀어 드릴</div><div class="big" style="margin-top:6px"><span class="gold">금빛도사</span>입니다</div></div>
       <div class="scroll-hint">▼ 아래로 내려 주십시오</div>
       ${pimg('assets/study_door_1.jpg')}
       <div class="blk"><div class="mid">발걸음이 이곳에 닿은 데에는<br>이유가 있습니다.</div><div class="big" style="margin-top:10px">우연이라 부르기엔<br><span class="red">너무 정확한</span> 시각입니다.</div></div>
-      ${pimg('assets/fan_1.jpg', '<div class="bub" style="right:18px;bottom:60px">…흥미롭군요.</div>')}
+      ${pimg('assets/fan_1_v2.jpg', '<div class="bub" style="right:18px;bottom:60px">…흥미롭군요.</div>')}
       <div class="blk"><div class="mid">돌려 말하지 않고,<br>눈앞에 선명하게 펼쳐지도록<br>말씀드리겠습니다.</div><div class="big" style="margin-top:12px"><span class="red">단도직입</span>으로 말입니다.</div></div>
       ${pimg('assets/moon_2.jpg')}
       <div class="blk"><div class="mid">달이 차고 기우는 것처럼<br>사람의 운에도 <span class="gold">흐름</span>이 있습니다.</div><div class="sm">그 흐름은 태어난 순간에 이미 새겨져 있습니다.</div></div>
-      ${pimg('assets/writing_2.jpg', '<div class="bub" style="left:18px;top:70px">여덟 글자를 적어 내려갑니다</div>')}
+      ${pimg('assets/writing_2_v2.jpg', '<div class="bub" style="left:18px;top:70px">여덟 글자를 적어 내려갑니다</div>')}
       <div class="blk"><div class="mid">먹이 물에 번지듯,<br>당신의 흐름도 숨길 수 없습니다.</div></div>
       ${pimg('assets/gold_ink_1.jpg')}
       <div class="blk"><div class="mid">태어난 해·달·날·시.<br>네 기둥, 여덟 글자가<br><span class="gold">명식</span>이 됩니다.</div></div>
@@ -429,13 +459,32 @@ const R = {
       <div class="blk"><div class="mid">다섯 기운의 균형이<br>당신의 성격과 운을 가릅니다.</div><div class="sm">木 · 火 · 土 · 金 · 水</div></div>
       ${pimg('assets/mandala_1.jpg')}
       <div class="blk"><div class="mid">그 모든 흐름을<br><span class="gold">한 권</span>에 담아냅니다.</div></div>
-      ${pimg('assets/book_coins_2.jpg', '<div class="bub" style="right:18px;top:70px">금빛도사의 명식은</div>')}
+      ${pimg('assets/book_coins_2_v2.jpg', '<div class="bub" style="right:18px;top:70px">금빛도사의 명식은</div>')}
       <div class="blk" style="padding-bottom:20px"><div class="mid">이제,<br>당신의 차례입니다.</div></div>
-      ${pimg('assets/invite_2.jpg', '<div class="bub" style="left:50%;transform:translateX(-50%);top:40px;white-space:nowrap">자, 앉으십시오.</div>')}
+      ${pimg('assets/invite_2_v2.jpg', '<div class="bub" style="left:50%;transform:translateX(-50%);top:40px;white-space:nowrap">자, 앉으십시오.</div>')}
       <div class="blk" style="padding-bottom:30px"><div class="mid">책장을 넘기기 전에,<br>먼저 <span class="gold">짚어 드릴 것</span>이 있습니다.</div></div>
       <div class="frame"><h3>답해 주신 것만으로도 보이는 것이 있습니다</h3>
         <p>${esc(S.name)}님은, ${love}</p><p>그리고 ${job}</p>
         <p>이 모든 흐름에는 <b class="gold">때</b>가 있습니다.<br>그 때가 언제인지는, 풀이에서 짚어 드리겠습니다.</p></div>
+
+      <div class="blk" style="padding-bottom:18px"><div class="mid">…그리고 한 가지 더.</div><div class="hook" style="margin-top:10px">나의 눈에는<br><span class="gold">다 보입니다.</span></div></div>
+      <div class="eye"></div>
+      <div class="blk"><div class="mid">${esc(S.name)}님이 말하지 않은 것,<br>아직 스스로도 모르는 것까지.</div><div class="sm">여덟 글자는 거짓말을 하지 않습니다.</div></div>
+
+      <div class="blk" style="padding-bottom:18px"><div class="mid">먼저, <span class="gold">재물의 기운</span>입니다.</div></div>
+      ${pimg('assets/wealth_1.jpg', '<div class="bub" style="right:18px;top:70px">…금빛이 흐르는 때가 보입니다</div>')}
+      <div class="blk"><div class="big">돈이 크게 <span class="gold">들어오는 때</span>가<br>분명히 있습니다.</div>
+        <div class="mid" style="margin-top:16px">그런데 같은 장면 안에,<br>그 돈이 <span class="red">새어 나가는 구멍</span>도 함께 보입니다.</div></div>
+      <div class="blk" style="padding-top:8px"><div class="hook"><span class="red">때를 모르고 지나치면</span><br>들어온 돈이 같은 해에<br>다시 빠져나갑니다.</div>
+        <div class="sm">언제 쥐고, 언제 놓아야 하는지 — 풀이에서 해(年)와 달(月)로 짚어 드립니다.</div></div>
+
+      <div class="blk" style="padding-bottom:18px"><div class="mid">그리고 가장 ${isSolo ? '궁금해하실' : '숨기고 싶으신'} 것.</div><div class="hook" style="margin-top:10px">앞으로 만나게 될<br><span class="gold">${esc(whom)}</span>입니다.</div></div>
+      ${pimg('assets/lover_1.jpg', '<div class="bub" style="left:18px;bottom:60px">…안개 너머에 서 있군요</div>')}
+      <div class="blk"><div class="mid">얼굴은 아직 흐릿합니다.<br>그러나 <span class="gold">당신을 오래 기다린 눈빛</span>만은<br>또렷하게 보입니다.</div></div>
+      <div class="blk" style="padding-top:6px"><div class="big">이 사람, 이미 한 번<br><span class="red">당신 곁을 스쳐 갔습니다.</span></div>
+        <div class="mid" style="margin-top:16px">그때는 서로 알아보지 못했을 뿐.</div></div>
+      <div class="blk" style="padding-top:6px"><div class="hook">만나는 <span class="gold">때</span>,<br>알아보는 <span class="gold">단서</span>,<br>놓치는 <span class="red">이유</span>까지.</div>
+        <div class="sm">풀이의 애정 편에서 한 장면씩 펼쳐 드립니다.</div></div>
       <div class="blk" style="padding-bottom:22px"><div class="big">금빛도사의 풀이는</div><div class="mid gold" style="margin-top:8px">이렇게 전해 드립니다</div></div>
       <ul class="list">
         <li>PDF 가이드북으로 정리해 이메일로 보내 드립니다</li>
