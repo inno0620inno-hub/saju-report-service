@@ -160,10 +160,27 @@ class SubmitRequest(BaseModel):
 # API 엔드포인트
 # ---------------------------------------------------------------------------
 
+_WEBAPP_DIR = os.path.dirname(os.path.abspath(__file__))
+
+
+def _html_page(name: str):
+    return FileResponse(os.path.join(_WEBAPP_DIR, name), headers={"Cache-Control": "no-cache"})
+
+
+@app.get("/")
+@app.get("/index.html")
 @app.get("/story")
+@app.get("/story.html")
 def story_page():
-    """금빛도사 스토리형 신청 페이지 (기존 /api/submit 그대로 사용)."""
-    return FileResponse(os.path.join(os.path.dirname(os.path.abspath(__file__)), "story.html"))
+    """금빛도사 스토리형 신청 페이지 (메인). 기존 /api/submit 그대로 사용."""
+    return _html_page("story.html")
+
+
+@app.get("/classic")
+@app.get("/classic.html")
+def classic_page():
+    """기존 신청폼 보존본."""
+    return _html_page("classic.html")
 
 
 @app.get("/api/products")
