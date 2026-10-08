@@ -29,6 +29,8 @@ pdftotext로 확인 → 그 페이지 번호로 목차를 다시 채워서 2차(
 import subprocess
 import os
 import re
+import json
+import random
 from saju_core import calculate_saju
 from report_prompts import SECTION_SPECS
 
@@ -72,6 +74,68 @@ BODY_MARGIN_RIGHT = "0"
 WATERMARK_DIV = (
     '<div class="watermark"><div class="watermark-mark">SAMPLE · 미리보기</div></div>'
 )
+
+
+# ---------------------------------------------------------------------------
+# 삽화(사이트 캐릭터 금빛도사 이미지 풀) — PDF를 만들 때마다 장(章)별로 무작위로 골라 넣는다.
+# report_assets/illustrations/pool.json 의 테마별 목록에서 뽑고, 한 PDF 안에서는 같은 그림을 반복하지 않는다.
+# 새 그림을 만들면 illustrations/ 에 1000x640 jpg로 넣고 pool.json에 이름만 추가하면 된다.
+# ---------------------------------------------------------------------------
+ILLUST_DIR = os.path.join(ASSETS_DIR, "illustrations")
+_THEME_RULES = [
+    ("wealth", ("재물", "사업", "이직")),
+    ("love", ("애정", "연인", "관계", "자녀")),
+    ("health", ("건강", "오행", "목", "화", "토", "금", "수")),
+    ("time", ("대운", "세운", "계절", "월간", "신년")),
+    ("char", ("성격", "십신", "신살")),
+    ("work", ("학업", "직장")),
+]
+
+
+def _theme_for(section_key):
+    if section_key in ("총론", "pillars"):
+        return "overview"
+    for theme, keys in _THEME_RULES:
+        if any(k in section_key for k in keys):
+            return theme
+    return "overview"
+
+
+def _load_illust_pool():
+    try:
+        with open(os.path.join(ILLUST_DIR, "pool.json"), "r", encoding="utf-8") as f:
+            return json.load(f)
+    except Exception:
+        return {}
+
+
+_BUBBLES = {
+    "overview": ["자, 이 사주의 큰 그림부터 짚어드리지요.", "처음 펼쳐 봐도 눈에 띄는 게 있습니다.", "차분히 따라오시면 다 보입니다."],
+    "char": ["겉으로 보이는 모습과 속마음은 조금 다르지요.", "본인도 몰랐던 성향이 여기 있습니다.", "이 부분, 꽤 정확하실 겁니다."],
+    "time": ["때가 오면 흐름이 바뀌는 법입니다.", "시기를 알면 서두를 필요가 없지요.", "올라갈 때와 쉬어갈 때가 보입니다."],
+    "wealth": ["돈은 흐르는 길이 따로 있습니다.", "들어오는 때와 새는 구멍을 보겠습니다.", "욕심보다 순서가 먼저입니다."],
+    "love": ["인연의 결을 한번 읽어보겠습니다.", "마음은 사주에 다 적혀 있지요.", "이 대목은 천천히 읽어보세요."],
+    "health": ["몸이 보내는 신호를 짚어드리지요.", "균형을 알면 미리 챙길 수 있습니다.", "무리하지 말라는 얘기입니다."],
+    "work": ["갈 길의 방향부터 정해보겠습니다.", "재능이 쓰일 자리가 따로 있습니다.", "오래 갈 일은 사주가 알려줍니다."],
+}
+
+
+def _illustration_html(section_key, used):
+    """장 머리에 넣을 삽화 <div>. 풀이 없거나 파일이 없으면 빈 문자열(삽화 없이도 PDF는 정상 생성)."""
+    pool = _load_illust_pool()
+    theme = _theme_for(section_key)
+    names = [n for n in pool.get(theme, []) if os.path.exists(os.path.join(ILLUST_DIR, n + ".jpg"))]
+    fresh = [n for n in names if n not in used]
+    if not fresh:  # 테마 그림을 다 썼으면 전체 풀에서 안 쓴 것, 그것도 없으면 아무거나
+        every = {n for lst in pool.values() for n in lst if os.path.exists(os.path.join(ILLUST_DIR, n + ".jpg"))}
+        fresh = [n for n in every if n not in used] or list(every)
+    if not fresh:
+        return ""
+    pick = random.choice(fresh)
+    used.add(pick)
+    line = random.choice(_BUBBLES.get(theme, _BUBBLES["overview"]))
+    return (f'<div class="illust"><img src="illustrations/{pick}.jpg">'
+            f'<div class="bubble">{line}</div></div>')
 
 
 def render_pillar_cards(data):
@@ -209,7 +273,43 @@ def _format_prose(text):
     return "<br>".join(_keep_words(s) for s in sentences)
 
 
+def _strip_markdown(text):
+    """AI가 섞어 쓰는 마크다운 기호(### 제목, --- 구분선, **굵게**, - 목록)를 지워 일반 글로 만든다.
+    제목 줄(#)은 앞뒤를 문단으로 분리해 한 문단으로 남긴다."""
+    out = []
+    for line in text.replace("\r", "").split("\n"):
+        t = line.strip()
+        if re.fullmatch(r"[-*_=\s]{3,}", t):            # --- / *** / ___ 구분선
+            out.append("")
+            continue
+        is_heading = t.startswith("#")
+        t = re.sub(r"^#{1,6}\s*", "", t)                   # ### 제목
+        t = re.sub(r"^[-*•]\s+", "", t)                    # - 목록
+        t = re.sub(r"\*\*|__|`", "", t)                    # **굵게**, `코드`
+        t = re.sub(r"(?<!\w)\*(?=\S)|(?<=\S)\*(?!\w)", "", t)  # *기울임*
+        if is_heading:
+            out.extend(["", t, ""])
+        else:
+            out.append(t)
+    return re.sub(r"\n{3,}", "\n\n", "\n".join(out))
+
+
+def paragraph_list(text):
+    text = _strip_markdown(text)
+    parts = [p.strip() for p in text.strip().split("\n\n") if p.strip()]
+    return [f"<p>{_format_prose(p)}</p>" for p in parts]
+
+
+def paragraphs_with_mid(text, mid_html):
+    """긴 풀이문은 가운데쯤에 삽화를 한 장 더 끼워 넣는다(문단 10개 이상일 때)."""
+    items = paragraph_list(text)
+    if mid_html and len(items) >= 10:
+        items.insert(len(items) // 2, mid_html)
+    return "\n".join(items)
+
+
 def paragraphs(text):
+    text = _strip_markdown(text)
     parts = [p.strip() for p in text.strip().split("\n\n") if p.strip()]
     return "\n".join(f"<p>{_format_prose(p)}</p>" for p in parts)
 
@@ -229,7 +329,7 @@ def _marker_span(marker_id):
     return f'<span class="pagemark">PGMARK_{marker_id}_END</span>'
 
 
-def _render_pillars_block(data, chapter_num_str, marker_id, watermark=False):
+def _render_pillars_block(data, chapter_num_str, marker_id, watermark=False, illust=""):
     wm = WATERMARK_DIV if watermark else ""
     return f"""
 <div class="section-break">
@@ -240,6 +340,8 @@ def _render_pillars_block(data, chapter_num_str, marker_id, watermark=False):
     <div class="chapter-title">사주 원국</div>
     <div class="chapter-title-sub">{_keep_words("태어난 순간의 하늘과 땅 — 여덟 글자")}</div>
     <div class="rule"></div>
+    <div class="rings"><div class="r1"></div><div class="r2"></div><div class="r3"></div></div>
+    {illust}
   </div>
   <div class="myeongsik">
     {render_pillar_cards(data)}
@@ -261,7 +363,7 @@ def _render_pillars_block(data, chapter_num_str, marker_id, watermark=False):
 </div>"""
 
 
-def _render_section_block(section_key, data, section_text, chapter_num_str, marker_id, watermark=False):
+def _render_section_block(section_key, data, section_text, chapter_num_str, marker_id, watermark=False, illust="", illust_mid=""):
     spec = SECTION_SPECS[section_key]
     extra_visual = ""
     if section_key == "대운흐름":
@@ -289,10 +391,12 @@ def _render_section_block(section_key, data, section_text, chapter_num_str, mark
     <div class="chapter-title">{_keep_words(spec['title'])}</div>
     {subtitle}
     <div class="rule"></div>
+    <div class="rings"><div class="r1"></div><div class="r2"></div><div class="r3"></div></div>
+    {illust}
   </div>
   {extra_visual}
   <div class="body-text">
-    {paragraphs(section_text)}
+    {paragraphs_with_mid(section_text, illust_mid)}
   </div>
   {callout_html}
 </div>"""
@@ -339,12 +443,16 @@ def _build_body_html(data, sections, section_order, page_map, watermark=False):
     with open(template_path, "r", encoding="utf-8") as f:
         html = f.read()
 
+    used_illust = set()
     parts = [_render_toc_block(section_order, page_map, watermark=watermark)]
-    parts.append(_render_pillars_block(data, HANJA_NUMERALS[0], "pillars", watermark=watermark))
+    parts.append(_render_pillars_block(data, HANJA_NUMERALS[0], "pillars", watermark=watermark,
+                                       illust=_illustration_html("pillars", used_illust)))
     for i, key in enumerate(section_order):
         chapter_num_str = _chapter_mark(i + 1)
         marker_id = f"sec_{i}_{key}"
-        parts.append(_render_section_block(key, data, sections[key], chapter_num_str, marker_id, watermark=watermark))
+        parts.append(_render_section_block(key, data, sections[key], chapter_num_str, marker_id, watermark=watermark,
+                                           illust=_illustration_html(key, used_illust),
+                                           illust_mid=_illustration_html("성격" if _theme_for(key) != "char" else key, used_illust)))
 
     body_html = "\n".join(parts)
     return html.replace("{{BODY_PAGES}}", body_html)

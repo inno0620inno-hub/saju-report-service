@@ -1,0 +1,46 @@
+{
+ "overview": [
+  "study_door_1",
+  "study_door_2",
+  "scroll_1",
+  "mandala_1",
+  "dosa_v2"
+ ],
+ "char": [
+  "fan_1_v2",
+  "writing_1_v2",
+  "moon_1",
+  "dosa_v2",
+  "study_door_2"
+ ],
+ "time": [
+  "moon_1",
+  "moon_2",
+  "scroll_2",
+  "mandala_2",
+  "gold_ink_1"
+ ],
+ "wealth": [
+  "wealth_1",
+  "book_coins_1_v2",
+  "gold_ink_2"
+ ],
+ "love": [
+  "lover_1",
+  "invite_1_v2",
+  "fan_1_v2"
+ ],
+ "health": [
+  "gold_ink_1",
+  "mandala_2",
+  "moon_2",
+  "mandala_1"
+ ],
+ "work": [
+  "writing_1_v2",
+  "book_coins_1_v2",
+  "study_door_2",
+  "invite_1_v2",
+  "scroll_2"
+ ]
+}

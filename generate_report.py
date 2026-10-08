@@ -20,18 +20,65 @@ from build_report import build_report
 # ---------------------------------------------------------------------------
 
 def call_ai_for_section(prompt: str) -> str:
-    """실제 Anthropic API를 호출해서 해석문을 생성한다."""
+    """해석문 생성. 기본은 Google Gemini 무료 API(GEMINI_API_KEY).
+    GEMINI_API_KEY가 없고 ANTHROPIC_API_KEY만 있으면 예전처럼 Claude를 쓴다(비상용)."""
+    gemini_key = os.environ.get("GEMINI_API_KEY")
+    if gemini_key:
+        return _call_gemini(prompt, gemini_key)
+    if os.environ.get("ANTHROPIC_API_KEY"):
+        return _call_claude(prompt, os.environ["ANTHROPIC_API_KEY"])
+    raise RuntimeError(
+        "GEMINI_API_KEY 환경변수가 설정되지 않았습니다. "
+        "https://aistudio.google.com/apikey 에서 무료 API 키를 발급받아 설정하세요."
+    )
+
+
+def _call_gemini(prompt: str, api_key: str) -> str:
+    """Gemini 무료 티어 호출. 분당 요청 제한(429)·일시 과부하(503)는 간격을 두고 재시도한다."""
+    import time
+    import requests
+
+    # 구형 모델(2.5 계열)은 신규 키에서 404가 나므로 최신 flash 계열을 순서대로 시도한다.
+    models = [m for m in [os.environ.get("GEMINI_MODEL"), "gemini-3.5-flash", "gemini-3.6-flash", "gemini-3.7-flash"] if m]
+    body = {
+        "contents": [{"role": "user", "parts": [{"text": prompt}]}],
+        "generationConfig": {
+            # 섹션 하나가 3000~3200자까지 길어질 수 있어 넉넉히 잡는다.
+            "maxOutputTokens": 16384,
+            "temperature": 0.9,
+        },
+    }
+    last_err = None
+    for attempt in range(10):
+        model = models[min(attempt // 3, len(models) - 1)]  # 같은 모델로 3번 실패하면 다음 모델로
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
+        try:
+            r = requests.post(url, headers={"x-goog-api-key": api_key, "Content-Type": "application/json"},
+                              json=body, timeout=180)
+        except requests.RequestException as e:
+            last_err = e
+            time.sleep(5 * (attempt + 1))
+            continue
+        if r.status_code in (404, 429, 500, 502, 503, 504):
+            last_err = RuntimeError(f"Gemini {r.status_code}: {r.text[:200]}")
+            time.sleep(min(60, 8 * (attempt + 1)))  # 무료 티어 분당 제한: 길게 쉬었다 재시도
+            continue
+        r.raise_for_status()
+        data = r.json()
+        try:
+            parts = data["candidates"][0]["content"]["parts"]
+            text = "".join(p.get("text", "") for p in parts).strip()
+        except (KeyError, IndexError):
+            raise RuntimeError(f"Gemini 응답에 본문이 없습니다: {str(data)[:300]}")
+        if not text:
+            raise RuntimeError(f"Gemini가 빈 응답을 보냈습니다: {str(data)[:300]}")
+        return text
+    raise RuntimeError(f"Gemini 호출이 계속 실패했습니다: {last_err}")
+
+
+def _call_claude(prompt: str, api_key: str) -> str:
     import anthropic
 
-    api_key = os.environ.get("ANTHROPIC_API_KEY")
-    if not api_key:
-        raise RuntimeError(
-            "ANTHROPIC_API_KEY 환경변수가 설정되지 않았습니다. "
-            "https://console.anthropic.com 에서 API 키를 발급받아 설정하세요."
-        )
-
-    # report_prompts.py의 섹션별 분량 지시 중 가장 긴 것(성격/대운흐름/십신/사업운 등 3000~3200자)도
-    # 잘리지 않도록 넉넉하게 잡는다. 출력이 길어질 수 있으므로 timeout도 함께 늘린다.
     client = anthropic.Anthropic(api_key=api_key, timeout=180.0)
     response = client.messages.create(
         model="claude-sonnet-4-6",

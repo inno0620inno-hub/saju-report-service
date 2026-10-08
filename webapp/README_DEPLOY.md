@@ -25,7 +25,7 @@
 cd webapp
 pip install -r requirements.txt
 cp .env.example .env
-# .env 파일을 열어서 ANTHROPIC_API_KEY만 우선 채워넣기 (나머지는 나중에)
+# .env 파일을 열어서 GEMINI_API_KEY만 우선 채워넣기 (나머지는 나중에)
 
 uvicorn server:app --reload
 ```
@@ -41,7 +41,7 @@ uvicorn server:app --reload
 
 | 항목 | 어디서 | 용도 |
 |---|---|---|
-| Anthropic API 키 | console.anthropic.com | AI 해석문 생성 |
+| Gemini API 키(무료) | aistudio.google.com/apikey | AI 해석문 생성 |
 | 이메일 계정 (Gmail 등) | 구글 계정 설정 → 앱 비밀번호 | PDF 이메일 발송 |
 | 카카오 비즈니스채널 | business.kakao.com | 알림톡 발신 주체 등록 |
 | 솔라피(또는 알리고 등) | solapi.com | 알림톡을 실제로 보내주는 대행 API |

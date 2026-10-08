@@ -4,11 +4,12 @@
 <meta charset="utf-8">
 <title>사주명식 리포트</title>
 <style>
+  @font-face { font-family: 'Cafe24Danjunghae'; src: url('fonts/Cafe24Danjunghae.ttf') format('truetype'); }
   * { box-sizing: border-box; margin: 0; padding: 0; }
   html, body { width: 100%; height: 100%; }
   body {
-    font-family: 'Noto Sans CJK KR', sans-serif;
-    background: #16140F;
+    font-family: 'Cafe24Danjunghae', 'Noto Sans CJK KR', sans-serif;
+    background: #0B0A09 url('bg_stripes.png');
     color: #F3EDE0;
     width: 220mm;
     height: 391.11mm;
@@ -26,7 +27,7 @@
   .eyebrow {
     letter-spacing: 0.5em;
     font-size: 18px;
-    color: #B8923F;
+    color: #D4AA3A;
     margin-bottom: 40px;
   }
   .hanja-big {
@@ -41,11 +42,11 @@
     font-family: 'Noto Serif CJK KR', serif;
     font-size: 52px;
     font-weight: 600;
-    color: #D4AF5A;
+    color: #EBC35A;
     margin-bottom: 56px;
   }
   .divider {
-    width: 90px; height: 2px; background: #B8923F;
+    width: 90px; height: 2px; background: #D4AA3A;
     margin: 0 auto 56px auto;
   }
   .subject-name {
@@ -61,13 +62,18 @@
   }
   .footer-mark {
     position: absolute;
-    bottom: 90px;
+    bottom: 14mm;
     left: 0; right: 0;
     text-align: center;
     font-size: 16px;
     color: #C9C0AC;
     letter-spacing: 0.3em;
   }
+  .arch { position: absolute; left: 50%; top: 11%; width: 160mm; height: 222mm; margin-left: -80mm; border: 2px solid #D4AA3A; border-radius: 50%; box-shadow: 0 0 30px 0 #D4AA3A44; }
+  .podium div { position: absolute; left: 50%; border: 2px solid #D4AA3A; border-bottom: 7px solid #EBC35A; border-radius: 50%; background: #0B0A09; box-shadow: 0 0 20px 0 #D4AA3A55; }
+  .podium .p1 { width: 190mm; height: 22mm; margin-left: -95mm; bottom: 38mm; }
+  .podium .p2 { width: 150mm; height: 18mm; margin-left: -75mm; bottom: 50mm; }
+  .podium .p3 { width: 110mm; height: 14mm; margin-left: -55mm; bottom: 61mm; }
   .watermark {
     position: absolute;
     top: 45%; left: 38%; transform: translate(-50%,-50%) rotate(-30deg);
@@ -78,6 +84,8 @@
 </head>
 <body>
 {{WATERMARK}}
+<div class="arch"></div>
+<div class="podium"><div class="p1"></div><div class="p2"></div><div class="p3"></div></div>
 <div class="inner">
   <div class="eyebrow">사 주 명 식 해 설</div>
   <div class="hanja-big">命</div>

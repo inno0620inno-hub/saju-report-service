@@ -5,7 +5,7 @@ pydantic>=2.6
 email-validator>=2.1
 requests>=2.31
 python-dotenv>=1.0
-anthropic>=0.40
+anthropic>=0.40   # 비상용(GEMINI_API_KEY 없을 때만)
 python-multipart>=0.0.9
 korean-lunar-calendar>=0.3   # 음력 → 양력 변환
 
