@@ -27,6 +27,7 @@ description: 금빛사주명식 서비스(PDF 리포트·Gemini·Railway 배포�
 ## PDF 디자인 규칙
 - 검정+금 아트데코(세로 줄무늬 배경, 금 링/단상 장식, 표지 아치), 글씨체 카페24 단정해체(번들), wkhtmltopdf는 linear-gradient·CSS 변수 미지원 → 단색 hex만.
 - 삽화: 장 머리마다 `illustrations/pool.json` 테마 풀에서 랜덤(한 PDF 내 중복 없음) + 금빛도사 말풍선, 긴 풀이문(문단 10개↑)은 중간에 1장 더. 새 그림은 1000x640 jpg로 폴더에 넣고 pool.json에 이름 추가.
+- **페이지 위·아래 흰 띠 해결(10/9 사용자 확인 완료):** 본문 위·아래 여백 22mm는 wkhtmltopdf 특성상 배경이 안 칠해져 흰 띠가 생김 → `report_assets/header.html`(빈 머리글)과 `footer.html`(페이지 번호 바닥글)에 본문과 같은 `#0B0A09 + bg_stripes.png` 배경을 주고 `--header-html/--footer-html` + `--header-spacing 0 --footer-spacing 0`으로 여백 영역을 칠한다(build_report.py의 본문 렌더 2곳). 여백을 줄이거나 body padding으로 해결하려 하지 말 것(페이지마다 반복 안 됨).
 - 풀이문 마크다운(###, ---, **)은 `_strip_markdown`이 제거.
 - 로컬에는 wkhtmltopdf가 없어 크롬 headless 스크린샷으로 미리보기(`chrome --headless=new --window-size=832,… --screenshot`); 최종 모양은 서버 샘플 PDF로 확인.
 
