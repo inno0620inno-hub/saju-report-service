@@ -13,6 +13,9 @@ description: 금빛사주명식 서비스(PDF 리포트·Gemini·Railway 배포�
 ## AI = Gemini 무료 API
 - 환경변수 `GEMINI_API_KEY`(없으면 ANTHROPIC_API_KEY로 폴백 — Claude 크레딧이 소진돼 실패한 적 있음). 모델 gemini-3.5-flash → 3.6 → 3.7 순 폴백(2.5 계열은 신규 키에서 404). 429/503 재시도 내장. **키는 파일·코드에 저장하지 않는다.**
 
+## Railway 규칙 (2026-10-09 사용자 확정)
+**사주는 `optimistic-flexibility` 프로젝트의 saju-report-service 하나만 쓴다. 다른 Railway 프로젝트·서비스를 새로 만들지 않는다.** 아래 함정 목록의 다른 프로젝트는 사주용이 아님.
+
 ## Railway 함정 (중요)
 - 프로젝트가 4개이고 이름이 자동 생성(believable-elegance, harmonious-optimism, pleasant-insight, optimistic-flexibility). **실제 운영 = `optimistic-flexibility`**(프로젝트 2d8316f0-8136-4dbf-828b-cff0094a2315 / 서비스 e139ba4b-ca7a-4fac-b6f2-c68480748b9e, 공개 도메인 연결됨). `believable-elegance`의 같은 이름 서비스는 도메인 없는 중복본.
 - 변수 추가 흐름: 서비스 → Variables → New Variable → 저장하면 "Apply N change" 바가 뜨고 **Deploy를 눌러야 적용**됨. API 키 입력은 사용자가 직접(Claude는 입력하지 않음).
