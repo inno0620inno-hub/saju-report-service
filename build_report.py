@@ -545,13 +545,15 @@ def build_report(data, name, birth_info, sections, section_order=None,
             f.write(body_pass1_html)
 
         footer_path = os.path.join(ASSETS_DIR, "footer.html")
+        header_path = os.path.join(ASSETS_DIR, "header.html")
         _run_wkhtmltopdf([
             "--encoding", "utf-8", "--enable-local-file-access",
             "--page-width", PAGE_WIDTH, "--page-height", PAGE_HEIGHT,
             "--margin-top", BODY_MARGIN_TOP, "--margin-bottom", BODY_MARGIN_BOTTOM,
             "--margin-left", BODY_MARGIN_LEFT, "--margin-right", BODY_MARGIN_RIGHT,
             "-q", body_pass1_html_path,
-            "--footer-html", footer_path,
+            "--header-html", header_path, "--header-spacing", "0",
+            "--footer-html", footer_path, "--footer-spacing", "0",
             body_pass1_pdf_path,
         ])
 
@@ -574,7 +576,8 @@ def build_report(data, name, birth_info, sections, section_order=None,
             "--margin-left", BODY_MARGIN_LEFT, "--margin-right", BODY_MARGIN_RIGHT,
             "--page-offset", "1",
             "-q", body_final_html_path,
-            "--footer-html", footer_path,
+            "--header-html", header_path, "--header-spacing", "0",
+            "--footer-html", footer_path, "--footer-spacing", "0",
             body_final_pdf_path,
         ])
 

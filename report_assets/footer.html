@@ -4,9 +4,11 @@
 <meta charset="utf-8">
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { height: 100%; width: 100%; }
   body {
     font-family: 'Noto Sans CJK KR', sans-serif;
-    background: transparent;
+    /* 아래 여백(22mm)도 본문과 같은 검정+줄무늬로 칠한다(흰 띠 방지) */
+    background: #0B0A09 url('bg_stripes.png');
   }
   .page-num {
     text-align: right;
@@ -14,6 +16,7 @@
     font-size: 16px;
     color: #C9C0AC;
     letter-spacing: 0.2em;
+    padding-top: 6mm;
   }
 </style>
 <script>
