@@ -297,6 +297,13 @@
     font-weight: 700;
     color: var(--gold-bright);
   }
+  .product-card .p-wait {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--gold-bright);
+    margin-bottom: 6px;
+    line-height: 1.4;
+  }
 </style>
 </head>
 <body>
@@ -438,7 +445,7 @@
                                 <div class="hint" style="margin-top:8px; line-height: 1.6;">
                 선택하신 상품 금액만큼 입금해주세요.<br>
                 <b>입금자명은 위에 적으신 이름과 동일하게</b> 해주시면 확인이 빨라져요.<br><br>
-                입금 확인 후 1시간 내외로 혹은 정하신 시간에 맞춰<br>
+                <span id="waitLine">입금 확인 후 1시간 내외로</span> 혹은 정하신 시간에 맞춰<br>
                 리포트가 제작·발송됩니다.<br><br>
                 입금 확인이 늦어지거나 문의사항이 있으시면<br>
                 <a href="http://pf.kakao.com/_gEISX" target="_blank" rel="noopener" style="color:var(--gold-bright); font-weight: 600;">카카오톡 채널</a>로 편하게 연락주세요.
@@ -547,6 +554,10 @@
   const productIdInput = document.getElementById('productIdInput');
   let selectedProductId = 'full';
 
+  // 분량이 많아 오래 걸리는 상품만 소요 시간을 따로 안내한다(2026-10-13 사용자 지시: 프리미엄만 2시간 이상 명시). 나머지는 기본 '1시간 내외'.
+  const WAIT_NORMAL = '입금 확인 후 1시간 내외로';
+  const LONG_WAIT = { premium: { card: '분량이 많아 입금 확인 후 2시간 이상 걸려요', line: '입금 확인 후 <b>2시간 이상</b>(분량이 많은 풀이예요)' } };
+
   async function loadProducts() {
     try {
       const res = await fetch(PRODUCTS_ENDPOINT);
@@ -559,6 +570,7 @@
         card.innerHTML = `
           <div class="p-name">${p.name}</div>
           <div class="p-desc">${p.description}</div>
+          ${LONG_WAIT[p.id] ? `<div class="p-wait">※ ${LONG_WAIT[p.id].card}</div>` : ''}
           <div class="p-price">${p.price.toLocaleString()}원</div>
         `;
         card.addEventListener('click', () => selectProduct(p.id));
@@ -575,6 +587,7 @@
     document.querySelectorAll('.product-card').forEach(el => {
       el.classList.toggle('selected', el.dataset.id === id);
     });
+    document.getElementById('waitLine').innerHTML = LONG_WAIT[id] ? LONG_WAIT[id].line : WAIT_NORMAL;   // 입금 안내의 소요 시간 문구
   }
 
   loadProducts();
