@@ -71,3 +71,11 @@ description: 금빛사주명식 서비스(PDF 리포트·Gemini·Railway 배포�
 - **`/files/`는 로그인 없이 열리는 공개 폴더**(알림톡 링크용)이고 파일명이 `순번_이름_상품`이라 추측 가능 → 고객 PDF 노출 위험(미조치, 사용자 승인 후 파일명에 무작위 토큰 등).
 - 실패한 주문(`failed`)을 다시 돌리는 admin 기능이 없고, AI 섹션 결과를 저장하지 않아 실패하면 전부 사라진다(개선 후보: 재처리 버튼·섹션 체크포인트).
 - **관리 대시보드 아티팩트** `https://claude.ai/artifact/9CmhNMoNC2MiPMAxs3ZMUE`: 관리자 링크는 `https://xn--jj0bw0vf2c1zcg0du2m.store/admin`(10/13 변경). 옛 Railway 주소를 쓰는 카드(예비 주소 /story, 상품 목록)는 옛 프로젝트 삭제 때 정리 필요. 고칠 땐 게시 틀을 이중으로 입히지 않게 본문(`<title>`~`</script>`)만 올린다.
+
+## 예약 발송 = 미리 생성 → 정시 발송 (10/13, 커밋 3a94dbb)
+- 예약 주문(`delivery_mode=scheduled`)은 입금확인 후 `pending`. 스케줄러(1분)가 (예약 시각 − `lead_minutes`)에 도달하면 생성 시작(스레드풀 3개) → 예약 전에 끝나면 `ready`(관리자 화면 '발송대기(생성완료)')로 보관 → 예약 시각에 `_deliver`. 예약 이후 끝났거나 즉시 발송이면 바로 발송.
+- `lead_minutes` = 섹션 수×10+20분(최대 240): 월간 30·2섹션 40·종합 80·프리미엄 240. 상태 전환은 `db.claim_order`(원자적)로 중복 처리 방지.
+- 예약 시각은 폼이 한국 시간으로 받으므로 `now_kst()`로 비교(서버 TZ와 무관).
+- 폼 문구: 종합 등 '입금 확인 후 1시간 내외로 혹은 정하신 시간에 맞춰', 프리미엄만 '2시간 이상'(분량 많음). 실주문 예약으로 ready→정시 발송은 아직 미검증(로컬 스텁 시험만).
+- 컨테이너 DB는 재배포 시 초기화 → 푸시 전 주문 존재 확인(Railway 로그에 POST /api/submit·/admin/confirm 유무).
+- Railway 로그 보기: 서비스 URL 열고 활성 배포 'View logs' → Deploy Logs 탭, 스크롤 맨 아래 screenshot(get_page_text엔 안 나옴, `?view=logs`는 빈 화면). 로그는 몇 분 늦게 뜰 수 있음. 테스트 발송 완료 줄: `[테스트발송] … 완료`/`완성: generated_reports/….pdf`.
