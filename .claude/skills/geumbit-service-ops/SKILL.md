@@ -59,3 +59,15 @@ description: 금빛사주명식 서비스(PDF 리포트·Gemini·Railway 배포�
 - **`GET /api/orders/{id}`**: 10/13 `verify_admin`(HTTP Basic)을 걸어 막음(예전엔 로그인 없이 주문 전체·개인정보 반환, 순차 번호 + CORS `*`). 어떤 화면도 이 API를 쓰지 않는다. 고객 정보는 조회하지 말 것(상태 코드만으로 존재 여부 확인).
 - 접수 DB는 컨테이너 안 `orders.db`(경로 하드코딩, 코드상 Volume 흔적 없음) → Volume을 안 붙였다면 재배포마다 접수 기록·생성 PDF가 초기화된다. 실주문이 있는 동안에는 푸시 전에 반드시 존재 여부를 확인할 것(두 서버 `/api/orders/N`은 인증이 필요해졌으니 admin 화면으로).
 - admin 비밀번호: pleasant-insight는 `ADMIN_PASSWORD` 설정됨(10/13 확인). Claude는 기본 계정으로 접속 시도 금지.
+
+## 10/13 서버 실물 PDF 검수에서 확인된 것 (종합 사주 주문 #1)
+- **새 디자인은 서버에서 정상 합성됨**(37쪽·4.0MB, 제작도구 pypdf, 폴백 아님). 입금확인→PDF 완성 약 29분(Gemini 무료 API 섹션당 1~4분+). 프리미엄(34섹션)은 계산상 훨씬 길어 '1시간 내외' 약속과 충돌할 수 있음(추정).
+- **서버 엔진은 wkhtmltox 0.12.6.1-3(bookworm, Dockerfile)** 이고 로컬 검증용 포터블은 0.12.6-1 — 버전이 다르다(0.12.6.1-3은 리눅스 .deb만 있어 이 PC에서 못 돌린다. WSL·Docker 없음). **서버 엔진은 장 시작 마커(`position:absolute`)를 실제 장 시작 쪽과 그 앞 쪽 맨 아래(여백, 눈에 안 보임)에 두 번 찍는다**(MuPDF 기본 추출은 앞 쪽 것을 무시하지만 poppler `pdftotext`·pypdf는 둘 다 읽는다). 예전 `_find_marker_pages`가 '처음 나온 쪽'을 골라 모든 장을 1쪽 앞으로 읽었고, 그 결과 10/13 서버 PDF에서 **목차 쪽번호가 전 장 −1, 장 도입 배경(opener 아트)이 실제 장 시작 쪽의 앞 쪽에 깔렸다**(로컬 샘플은 정상).
+  - **수정(10/13)**: 마커가 여러 쪽에 나오면 '마지막' 쪽 채택, `pdftotext`를 한 번에 읽고 `\f`로 쪽을 나눔(`_pdf_page_texts`), 최종본에서 마커를 다시 읽어 목차와 다르면 재렌더(최대 3회, `[report] 목차 쪽번호 보정` 로그), 마지막 문단 2개+콜아웃(+마지막 장은 맺음 장식)을 `.keep-tail`(page-break-inside: avoid)로 묶어 '콜아웃/장식만 남은 거의 빈 쪽'을 방지.
+  - **로컬 재현·검증법**: 서버 엔진은 못 돌리므로 하네스에서 `subprocess.run`을 감싸 pdftotext 결과에 '다음 쪽 마커를 앞 쪽에도 섞는' 흉내를 낸다(옛 코드로 돌리면 목차 −1·배경 어긋남이 그대로 재현됨). 스크래치 `tools/test_build2.py <out.pdf> [--product full] [--sim-dup] [--seed N] [--brief] [--legacy]`(가짜 문장, AI 없음; `BR_ROOT`로 `git archive HEAD` 사본(옛 코드) 비교). 실제 서버 PDF(마커 중복 있음)로는 `_find_marker_pages`가 {3,6,9,15,22,27,33}을 돌려주는지 단위 확인함.
+  - 서버에서 새 코드 확인: 푸시 후 admin '테스트 발송'(재물운 등 2섹션 상품)을 사용자가 눌러야 한다(Claude는 admin 로그인 못 함). 완성 PDF는 `/files/…` 폴링 또는 로그의 `완성: …pdf`.
+- 서버 PDF 검수법: `/files/saju_report_{주문번호}_{이름}_{상품id}.pdf`를 내려받아(`tools/wait_pdf.py` 폴링) `pdf_sheet.py`로 쪽 시트, `toc_check.py`(목차 vs 마커 쪽), `art_pages.py`(쪽별 배경 아트가 어느 종류인지: 큰 그림 xref로 구분)로 확인. 스크래치에 받은 고객 PDF·렌더 이미지는 끝나면 지운다.
+- **Railway 로그 뷰어는 새로고침해도 `print` 줄이 몇 분 늦게 보일 수 있다**(Dockerfile에 PYTHONUNBUFFERED=1이 있어 서버 버퍼 문제는 아님). '로그 침묵 = 멈춤'으로 단정하지 말고 `/files/…pdf` 404→200을 본다(폴링 간격 60초 이상, 404 줄이 사용자 로그에 찍힘). Gemini 재시도는 로그에 안 찍힌다.
+- **`/files/`는 로그인 없이 열리는 공개 폴더**(알림톡 링크용)이고 파일명이 `순번_이름_상품`이라 추측 가능 → 고객 PDF 노출 위험(미조치, 사용자 승인 후 파일명에 무작위 토큰 등).
+- 실패한 주문(`failed`)을 다시 돌리는 admin 기능이 없고, AI 섹션 결과를 저장하지 않아 실패하면 전부 사라진다(개선 후보: 재처리 버튼·섹션 체크포인트).
+- **관리 대시보드 아티팩트** `https://claude.ai/artifact/9CmhNMoNC2MiPMAxs3ZMUE`: 관리자 링크는 `https://xn--jj0bw0vf2c1zcg0du2m.store/admin`(10/13 변경). 옛 Railway 주소를 쓰는 카드(예비 주소 /story, 상품 목록)는 옛 프로젝트 삭제 때 정리 필요. 고칠 땐 게시 틀을 이중으로 입히지 않게 본문(`<title>`~`</script>`)만 올린다.

@@ -122,6 +122,9 @@
     background: #120C22; background: -webkit-gradient(linear, left top, left bottom, from(#1D1438), to(#0E0A1B));
     font-size: 40px; color: #D9D1BC; line-height: 1.55; width: 100%; margin-top: 32px; text-align: center; page-break-inside: avoid; }
 
+  /* 맺음 덩어리: 마지막 문단 몇 개 + 콜아웃을 쪽 가운데서 끊지 않는다(콜아웃 상자만 다음 쪽에 덩그러니 남는 것 방지) */
+  .keep-tail { page-break-inside: avoid; }
+
   /* ---------- 목차 ---------- */
   .toc-head { text-align: center; }
   .toc-item { display: table; width: 100%; table-layout: fixed; padding: 26px 0; border-bottom: 1px solid rgba(212,170,58,0.4); page-break-inside: avoid; }

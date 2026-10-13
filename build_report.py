@@ -22,7 +22,8 @@ template_cover.html / template_body.html에 동적으로 내용을 조립해 최
 (섹션이 몇 페이지짜리가 될지 내용 길이에 따라 달라짐), 1차로 숨김
 마커를 심어서 렌더링 → 각 마커가 실제로 몇 페이지에 찍혔는지
 pdftotext로 확인 → 그 페이지 번호로 목차를 다시 채워서 2차(최종)
-렌더링을 하는 2-pass 방식을 쓴다.
+렌더링을 하는 2-pass 방식을 쓴다. 최종본에서도 마커를 다시 읽어 목차 번호와 다르면
+보정해서 다시 렌더링한다(검산). 마커가 두 쪽에 찍히는 엔진이 있어(서버) '마지막 쪽'을 채택한다.
 ---------------------------------------------------------------------------
 """
 
@@ -348,12 +349,22 @@ def paragraph_list(text):
     return [f"<p>{_format_prose(p)}</p>" for p in parts]
 
 
-def paragraphs_with_mid(text, mid_html):
-    """긴 풀이문은 가운데쯤에 삽화를 한 장 더 끼워 넣는다(문단 10개 이상일 때)."""
+def paragraphs_with_mid(text, mid_html, tail_html="", keep_tail=2):
+    """긴 풀이문은 가운데쯤에 삽화를 한 장 더 끼워 넣는다(문단 10개 이상일 때).
+
+    tail_html(맺음 콜아웃)이 있으면 마지막 문단 keep_tail개와 콜아웃을 '쪽 가운데서 끊기지 않는 한 덩어리'로 묶어 이어 붙인다.
+    그렇지 않으면 마지막 문단이 앞 쪽 맨 아래에서 끝나는 순간 콜아웃 상자만 다음 쪽에 덩그러니 남아 거의 빈 쪽이 생긴다(2026-10-13 서버 PDF 26쪽).
+    덩어리가 앞 쪽에 안 들어가면 문단 몇 개가 콜아웃과 함께 다음 쪽으로 넘어가 그 쪽이 최소한 문단이 있는 쪽이 된다.
+    반환: (본문 HTML, 맺음 덩어리 HTML) — 맺음 덩어리는 호출하는 쪽에서 .body-text 밖(콜아웃 원래 자리)에 놓는다."""
     items = paragraph_list(text)
     if mid_html and len(items) >= 10:
         items.insert(len(items) // 2, mid_html)
-    return "\n".join(items)
+    if not tail_html:
+        return "\n".join(items), ""
+    k = min(keep_tail, len(items))
+    head, tail = items[:len(items) - k], items[len(items) - k:]
+    tail_block = (f'<div class="keep-tail"><div class="body-text">{"".join(tail)}</div>{tail_html}</div>')
+    return "\n".join(head), tail_block
 
 
 def paragraphs(text):
@@ -435,7 +446,11 @@ def _render_pillars_block(data, chapter_num_str, marker_id, watermark=False, ill
 </div>"""
 
 
-def _render_section_block(section_key, data, section_text, chapter_num_str, marker_id, watermark=False, illust="", illust_mid=""):
+END_ORN_HTML = '<div class="end-orn"><img src="orn/end.png"><div>金 · 命 · 式</div></div>'   # 맺음 장식
+
+
+def _render_section_block(section_key, data, section_text, chapter_num_str, marker_id, watermark=False, illust="", illust_mid="", end_html=""):
+    """end_html: 마지막 장에만 넘기는 맺음 장식. 마지막 문단·콜아웃과 한 덩어리로 묶어, 장식만 덩그러니 남는 쪽을 막는다."""
     spec = SECTION_SPECS[section_key]
     extra_visual = ""
     if section_key == "대운흐름":
@@ -455,6 +470,7 @@ def _render_section_block(section_key, data, section_text, chapter_num_str, mark
     wm = WATERMARK_DIV if watermark else ""
     head = _chapter_head_html(chapter_num_str, spec['eyebrow'], _keep_words(spec['title']),
                               "" if section_key == "대운흐름" else _keep_words(spec["subtitle"]), illust)
+    body_html, tail_block = paragraphs_with_mid(section_text, illust_mid, callout_html + end_html)   # 콜아웃·맺음 장식이 있으면 마지막 문단 2개와 한 덩어리
 
     return f"""
 <div class="section-break">
@@ -462,9 +478,9 @@ def _render_section_block(section_key, data, section_text, chapter_num_str, mark
   {head}
   {extra_visual}
   <div class="body-text">
-    {paragraphs_with_mid(section_text, illust_mid)}
+    {body_html}
   </div>
-  {callout_html}
+  {tail_block}
 </div>"""
 
 
@@ -519,11 +535,14 @@ def _build_body_html(data, sections, section_order, page_map, watermark=False, b
     for i, key in enumerate(section_order):
         chapter_num_str = _chapter_mark(i + 1)
         marker_id = f"sec_{i}"
+        is_last = (i == len(section_order) - 1)
         parts.append(_render_section_block(key, data, sections[key], chapter_num_str, marker_id, watermark=watermark,
                                            illust=_illustration_html(key, used_illust),
-                                           illust_mid=_illustration_html("성격" if _theme_for(key) != "char" else key, used_illust)))
+                                           illust_mid=_illustration_html("성격" if _theme_for(key) != "char" else key, used_illust),
+                                           end_html=END_ORN_HTML if is_last else ""))   # 맺음 장식은 마지막 장 끝 덩어리에 포함
 
-    parts.append('<div class="end-orn"><img src="orn/end.png"><div>金 · 命 · 式</div></div>')   # 맺음 장식
+    if not section_order:
+        parts.append(END_ORN_HTML)
     body_html = "\n".join(parts)
     return html.replace("{{BODY_PAGES}}", body_html)
 
@@ -574,27 +593,35 @@ def _pdf_unite(paths, out_pdf):
             w.write(f)
 
 
+def _pdf_page_texts(pdf_path):
+    """pdftotext로 각 쪽의 글자를 리스트로(0번 = 1쪽). 한 번에 읽고 쪽 구분(\\f)으로 나누며, 쪽 수가 안 맞으면 쪽마다 따로 읽는다."""
+    total_pages = _pdf_page_count(pdf_path)
+    run = lambda args: subprocess.run(
+        ["pdftotext", *args, pdf_path, "-"],
+        check=True, capture_output=True, text=True, encoding="utf-8", errors="replace"   # 인코딩 명시(윈도우 로컬 실행 대비)
+    ).stdout or ""
+    parts = run([]).split("\f")
+    if len(parts) - 1 == total_pages:             # poppler는 쪽마다 끝에 \f 를 붙인다
+        return parts[:total_pages]
+    return [run(["-f", str(p), "-l", str(p)]) for p in range(1, total_pages + 1)]
+
+
 def _find_marker_pages(pdf_path, marker_ids):
     """
-    pdftotext로 pdf_path의 각 페이지 텍스트를 확인해서, 각 marker_id가
-    처음 등장하는 (1부터 시작하는) 로컬 페이지 번호를 찾는다.
-    """
-    total_pages = _pdf_page_count(pdf_path)
+    각 marker_id가 찍힌 (1부터 시작하는) 로컬 페이지 번호 = 장이 실제로 시작하는 쪽을 찾는다.
 
-    remaining = set(marker_ids)
+    [2026-10-13 서버 실측] 서버 엔진(wkhtmltopdf 0.12.6.1-3)은 장 시작 마커(position:absolute)를
+    실제 장 시작 쪽과 '그 앞 쪽' 맨 아래(여백이라 눈에는 안 보임)에 한 번씩, 모두 두 번 찍는다.
+    예전처럼 '처음 나온 쪽'을 고르면 모든 장이 1쪽씩 앞으로 읽혀서 목차 쪽번호와 장 도입 배경이 어긋났다.
+    장은 항상 새 쪽에서 시작하므로(page-break-before: always) 여러 쪽에 나오면 '마지막' 쪽이 진짜다.
+    (로컬 엔진 0.12.6-1은 한 번만 찍으므로 어느 쪽 규칙이든 같은 결과)
+    """
     found = {}
-    for page in range(1, total_pages + 1):
-        if not remaining:
-            break
-        text = subprocess.run(
-            ["pdftotext", "-f", str(page), "-l", str(page), pdf_path, "-"],
-            check=True, capture_output=True, text=True, encoding="utf-8", errors="replace"   # 인코딩 명시(윈도우 로컬 실행 대비)
-        ).stdout or ""
+    for page, text in enumerate(_pdf_page_texts(pdf_path), start=1):
         flat = re.sub(r"\s+", "", text)      # poppler 버전에 따라 작은 글자 사이에 공백이 끼므로 공백을 지우고 비교
-        for marker_id in list(remaining):
+        for marker_id in marker_ids:
             if f"PGMARK_{marker_id}_END" in flat:
-                found[marker_id] = page
-                remaining.discard(marker_id)
+                found[marker_id] = page      # 계속 덮어써서 마지막 쪽을 남긴다
     return found
 
 
@@ -703,22 +730,34 @@ def _build(data, name, birth_info, sections, section_order, output_pdf, watermar
         # 페이지 번호는 본문 내 로컬 페이지 번호 + 1 이다.
         page_map = {marker_id: local_page + 1 for marker_id, local_page in local_pages.items()}
 
-        # ---- 4) 본문 최종 렌더링 (목차에 실제 페이지번호 반영) -----------------
-        body_final_html = _build_body_html(data, sections, section_order, page_map=page_map, watermark=watermark, bg_css=bg_css)
-        with open(body_final_html_path, "w", encoding="utf-8") as f:
-            f.write(body_final_html)
+        # ---- 4) 본문 최종 렌더링 (목차에 실제 페이지번호 반영) + 검산 -----------------
+        # 최종본에서 마커를 다시 읽어, 목차에 찍은 번호와 다르면(목차 숫자 때문에 쪽 나눔이 1차와 달라졌거나 1차 검출이 틀렸을 때)
+        # 그 번호로 한 번 더 렌더링한다(최대 3번까지). 장 도입 배경(opener)에 쓰는 쪽도 최종본에서 읽은 값을 쓴다.
+        for attempt in range(3):
+            body_final_html = _build_body_html(data, sections, section_order, page_map=page_map, watermark=watermark, bg_css=bg_css)
+            with open(body_final_html_path, "w", encoding="utf-8") as f:
+                f.write(body_final_html)
 
-        _run_wkhtmltopdf([
-            "--encoding", "utf-8", "--enable-local-file-access",
-            "--page-width", PAGE_WIDTH, "--page-height", PAGE_HEIGHT,
-            "--margin-top", BODY_MARGIN_TOP, "--margin-bottom", BODY_MARGIN_BOTTOM,
-            "--margin-left", BODY_MARGIN_LEFT, "--margin-right", BODY_MARGIN_RIGHT,
-            "--page-offset", "1",
-            "-q", body_final_html_path,
-            "--header-html", header_path, "--header-spacing", "0",
-            "--footer-html", footer_path, "--footer-spacing", "0",
-            body_final_pdf_path,
-        ])
+            _run_wkhtmltopdf([
+                "--encoding", "utf-8", "--enable-local-file-access",
+                "--page-width", PAGE_WIDTH, "--page-height", PAGE_HEIGHT,
+                "--margin-top", BODY_MARGIN_TOP, "--margin-bottom", BODY_MARGIN_BOTTOM,
+                "--margin-left", BODY_MARGIN_LEFT, "--margin-right", BODY_MARGIN_RIGHT,
+                "--page-offset", "1",
+                "-q", body_final_html_path,
+                "--header-html", header_path, "--header-spacing", "0",
+                "--footer-html", footer_path, "--footer-spacing", "0",
+                body_final_pdf_path,
+            ])
+
+            local_pages = _find_marker_pages(body_final_pdf_path, marker_ids)
+            check_map = {marker_id: local_page + 1 for marker_id, local_page in local_pages.items()}
+            if check_map == page_map:
+                break
+            print(f"[report] 목차 쪽번호 보정({attempt + 1}회): {page_map} → {check_map}")
+            page_map = check_map
+        else:
+            print("[report] 경고: 목차 쪽번호가 3번 보정해도 최종본과 다릅니다(마지막 렌더링을 그대로 사용)")
 
         # ---- 5) 합치기: 아트 모드는 배경 아트 위에 글자 층, 기본 모드는 표지+본문 이어붙이기 ----
         if art:
