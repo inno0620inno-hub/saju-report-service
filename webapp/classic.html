@@ -537,9 +537,11 @@
     }
   });
 
-  // ===== 이 URL을 실제 배포한 서버 주소로 교체하세요 =====
-  const API_ENDPOINT = "https://saju-report-service-production.up.railway.app/api/submit";
-  const PRODUCTS_ENDPOINT = "https://saju-report-service-production.up.railway.app/api/products";
+  // 접수·상품 API는 항상 운영 서버(pleasant-insight, 도메인 금빛사주명식.store)로 (2026-10-13 수정: 예전엔 옛 Railway 프로젝트 주소가 고정돼 있었음)
+  // 내 컴퓨터(localhost)에서 열었을 때만 자기 자신 서버를 쓴다.
+  const API_ROOT = ['localhost', '127.0.0.1'].includes(location.hostname) ? "" : "https://xn--jj0bw0vf2c1zcg0du2m.store";
+  const API_ENDPOINT = API_ROOT + "/api/submit";
+  const PRODUCTS_ENDPOINT = API_ROOT + "/api/products";
 
   const productGrid = document.getElementById('productGrid');
   const productIdInput = document.getElementById('productIdInput');

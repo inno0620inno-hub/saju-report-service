@@ -53,8 +53,9 @@ description: 금빛사주명식 서비스(PDF 리포트·Gemini·Railway 배포�
 
 ## 10/13 배포 후 확인된 운영 사실 (중요 — 다음 작업 전에 읽기)
 - **배포**: 10/13 커밋 `3ed8a49`(폼)·`92232ea`(PDF) 푸시 → 두 주소 모두 새 폼 반영 확인(마법진·PDF 샘플 5장·새 문구, /classic 포함). PDF의 서버 실물(pypdf 합성·글꼴)은 admin '테스트 발송'으로 사용자가 확인해야 함(미확인).
-- **서비스가 둘이다**: 도메인 `금빛사주명식.store`와 `saju-report-service-production.up.railway.app`는 **별개 서비스**(갱신 시점이 달랐음) — 둘 다 이 저장소 main에서 자동 배포된다(= 푸시하면 둘 다 재배포). 변수·DB는 각자 따로.
-- **접수가 도메인 서버로 가지 않는다(미해결)**: `story.html`의 `PROD_API`가 `saju-report-service-production.up.railway.app`로 하드코딩돼, 운영 도메인에서 연 폼의 `/api/products`·`/api/submit`은 **그 옛 주소의 서비스**로 간다(Playwright로 운영 페이지의 요청 URL 확인). 10/9의 'pleasant-insight만 쓴다' 결정과 어긋남 → 같은 서버로 보내도록(`API_BASE=''`) 바꾸려면 **pleasant-insight에 TELEGRAM_BOT_TOKEN/CHAT_ID 등 변수가 있는지 먼저 확인**해야 한다(없으면 알림이 끊김). 사용자 결정 대기.
-- **`GET /api/orders/{id}`는 로그인 없이 주문 전체(이름·전화·이메일·생년월일)를 반환**(`SELECT *`, CORS `*`, 순차 번호). 어떤 화면도 안 쓰므로 막아도 영향 없음 — 사용자 승인 후 막을 것. 실제 고객 정보는 조회하지 말 것(상태 코드만으로 존재 여부 확인).
-- **접수 DB는 컨테이너 안 `orders.db`**(경로 하드코딩, 코드상 Volume 흔적 없음) → Volume을 안 붙였다면 재배포마다 접수 기록·생성 PDF가 초기화된다. 배포 직후 두 서비스 모두 주문 1~80이 404였음(원래 없었는지 초기화인지 구분 불가). 실주문이 있는 동안에는 푸시 전에 확인할 것.
-- admin 기본 비밀번호(`changeme`) 미해결 상태는 10/9 메모 그대로(사용자가 강한 비밀번호 변수 추가 필요, Claude는 기본 계정으로 접속 시도 금지).
+- **서비스가 둘이다**(10/13 확인: 옛 주소=optimistic-flexibility): 도메인 `금빛사주명식.store`와 `saju-report-service-production.up.railway.app`는 **별개 서비스**(갱신 시점이 달랐음) — 둘 다 이 저장소 main에서 자동 배포된다(= 푸시하면 둘 다 재배포). 변수·DB는 각자 따로.
+- **접수 경로(10/13 수정)**: 예전엔 `PROD_API`가 옛 프로젝트 `optimistic-flexibility`의 `saju-report-service-production.up.railway.app`로 고정돼, 도메인에서 연 폼의 접수가 그리로 갔다(Playwright로 확인). 이제 story/index/classic의 접수·상품 API는 **항상 `https://xn--jj0bw0vf2c1zcg0du2m.store`(= pleasant-insight)**, localhost에서 열 때만 자기 자신. 도메인이 바뀌면 `PROD_API`(story/index)·`API_ROOT`(classic)도 바꿀 것.
+- **Railway 변수 확인(10/13, 이름만 봄·값은 안 열음)**: pleasant-insight = 10개(ADMIN_USERNAME, ADMIN_PASSWORD, ANTHROPIC_API_KEY, GEMINI_API_KEY, RESEND_API_KEY, RESEND_FROM_EMAIL, SENDER_NAME, SENDER_PASS, TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID). 옛 optimistic-flexibility(`-production` 주소, Online) = 9개로 **ADMIN_PASSWORD 없음 → 그쪽 /admin은 기본 비밀번호**. 프로젝트 ID: believable-elegance=5344fdfb…, harmonious-optimism=e7d7f496…, pleasant-insight=9e279feb…, optimistic-flexibility=2d8316f0…(서비스 e139ba4b…). 옛 프로젝트는 아직 이 저장소에 연결돼 **푸시마다 같이 재배포**됨 → 중지/삭제(사용자 확인 후)를 권장. 보기 전용 브라우저 확인은 Chrome 프로필1(deviceId 99777c90…)에서 Railway가 로그인돼 있었다.
+- **`GET /api/orders/{id}`**: 10/13 `verify_admin`(HTTP Basic)을 걸어 막음(예전엔 로그인 없이 주문 전체·개인정보 반환, 순차 번호 + CORS `*`). 어떤 화면도 이 API를 쓰지 않는다. 고객 정보는 조회하지 말 것(상태 코드만으로 존재 여부 확인).
+- 접수 DB는 컨테이너 안 `orders.db`(경로 하드코딩, 코드상 Volume 흔적 없음) → Volume을 안 붙였다면 재배포마다 접수 기록·생성 PDF가 초기화된다. 실주문이 있는 동안에는 푸시 전에 반드시 존재 여부를 확인할 것(두 서버 `/api/orders/N`은 인증이 필요해졌으니 admin 화면으로).
+- admin 비밀번호: pleasant-insight는 `ADMIN_PASSWORD` 설정됨(10/13 확인). Claude는 기본 계정으로 접속 시도 금지.

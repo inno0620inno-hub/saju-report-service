@@ -267,7 +267,9 @@ def submit_order(req: SubmitRequest, background_tasks: BackgroundTasks):
 
 
 @app.get("/api/orders/{order_id}")
-def get_order_status(order_id: int):
+def get_order_status(order_id: int, username: str = Depends(verify_admin)):
+    # 주문 전체(이름·연락처·이메일·생년월일)를 돌려주므로 관리자 인증 필수.
+    # (2026-10-13 이전에는 로그인 없이 주문 번호만 넣으면 누구나 고객 정보를 볼 수 있었다 — 어떤 화면도 이 API를 쓰지 않는다.)
     order = db.get_order(order_id)
     if not order:
         raise HTTPException(404, "주문을 찾을 수 없습니다.")
