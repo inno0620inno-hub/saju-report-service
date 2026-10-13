@@ -16,7 +16,8 @@ server.py — 사주 리포트 서비스의 메인 서버.
 import os
 import sys
 import re
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
+from concurrent.futures import ThreadPoolExecutor
 from dotenv import load_dotenv
 load_dotenv()  # .env 파일이 있으면 환경변수로 불러온다
 
@@ -51,7 +52,7 @@ def build_attachment_filename(product_id: str, customer_name: str, dt: datetime 
     발송 시 첨부파일 표시 이름에만 사용된다.
     """
     product_name = PRODUCTS_BY_ID.get(product_id, {}).get("name", product_id)
-    dt = dt or datetime.now()
+    dt = dt or now_kst()
     date_str = f"{dt.year}년{dt.month}월{dt.day}일"
     base = f"금빛사주명식-{product_name}-{customer_name}-{date_str}"
     if sample:
@@ -96,7 +97,23 @@ def verify_admin(credentials: HTTPBasicCredentials = Depends(security)):
     return credentials.username
 
 
+KST = timezone(timedelta(hours=9))
+
+
+def now_kst() -> datetime:
+    """고객이 폼에 적는 예약 시각은 한국 시간이므로, 서버 시간대와 상관없이 KST 기준 naive 시각으로 비교한다."""
+    return datetime.now(KST).replace(tzinfo=None)
+
+
+def lead_minutes(product_id: str) -> int:
+    """예약 발송 주문의 PDF를 예약 시각보다 얼마나 일찍 만들기 시작할지(분).
+    섹션당 10분 + 20분(Gemini가 느린 날 대비 넉넉히), 최대 4시간. 일찍 끝나면 예약 시각까지 보관했다가 정시에 발송한다."""
+    n = len(PRODUCTS_BY_ID.get(product_id, {}).get("sections", [None] * 6))
+    return min(n * 10 + 20, 240)
+
+
 STATUS_LABELS = {
+    "ready": "발송대기(생성완료)",
     "awaiting_payment": "입금대기",
     "pending": "처리대기",
     "processing": "처리중",
@@ -246,7 +263,7 @@ def submit_order(req: SubmitRequest, background_tasks: BackgroundTasks):
             scheduled_dt = datetime.fromisoformat(f"{req.schedule_date}T{req.schedule_time}")
         except ValueError:
             raise HTTPException(400, "예약 날짜/시간 형식이 올바르지 않습니다.")
-        if scheduled_dt < datetime.now():
+        if scheduled_dt < now_kst():
             raise HTTPException(400, "예약 시간은 현재보다 미래여야 합니다.")
         scheduled_at = scheduled_dt.isoformat()
 
@@ -506,7 +523,7 @@ def render_consult_html(order: dict, data: dict) -> str:
     font-weight:700; margin-left:6px; vertical-align:middle;
   }}
   .badge-awaiting_payment {{ background:rgba(217,108,108,0.18); color:#E08A8A; }}
-  .badge-pending, .badge-processing {{ background:rgba(184,146,63,0.2); color:#D4AF5A; }}
+  .badge-pending, .badge-processing, .badge-ready {{ background:rgba(184,146,63,0.2); color:#D4AF5A; }}
   .badge-sent {{ background:rgba(76,122,82,0.22); color:#8FC496; }}
   .badge-failed {{ background:rgba(217,108,108,0.22); color:#E08A8A; }}
   .badge-cancelled {{ background:rgba(255,255,255,0.08); color:#888; }}
@@ -808,12 +825,12 @@ def admin_test_send(
 # ---------------------------------------------------------------------------
 
 def process_order(order_id: int):
-    order = db.get_order(order_id)
-    if not order or order["status"] != "pending":
+    """pending 주문 하나를 끝까지 처리. 예약 발송이고 예약 시각 전에 PDF가 끝나면 'ready'로 두고 정시 발송을 기다린다."""
+    if not db.claim_order(order_id, "pending", "processing"):
         return
+    order = db.get_order(order_id)
 
     print(f"[주문 {order_id}] 처리 시작: {order['name']}")
-    db.mark_processing(order_id)
     try:
         y, m, d = order["birth_date"].split("-")
         if order["time_unknown"]:
@@ -833,6 +850,22 @@ def process_order(order_id: int):
                                          order_id=order_id)
         print(f"[주문 {order_id}] PDF 생성 완료: {pdf_path}")
 
+        if order["delivery_mode"] == "scheduled" and order["scheduled_at"] and order["scheduled_at"] > now_kst().isoformat():
+            db.mark_ready(order_id, pdf_path)
+            print(f"[주문 {order_id}] 예약 발송 대기 (예약 시각 {order['scheduled_at']}에 발송)")
+            return
+
+        _deliver(order, pdf_path)
+
+    except Exception as e:
+        db.mark_failed(order_id, str(e))
+        print(f"[주문 {order_id}] 처리 중 오류로 실패: {e}")
+
+
+def _deliver(order: dict, pdf_path: str):
+    """만들어 둔 PDF를 카톡/이메일로 보내고 최종 상태를 기록."""
+    order_id = order["id"]
+    try:
         # 카카오 알림톡 발송 (실패해도 이메일은 계속 시도)
         kakao_error = None
         try:
@@ -857,10 +890,9 @@ def process_order(order_id: int):
         else:
             db.mark_sent(order_id, pdf_path)
             print(f"[주문 {order_id}] 최종 완료")
-
     except Exception as e:
         db.mark_failed(order_id, str(e))
-        print(f"[주문 {order_id}] 처리 중 오류로 실패: {e}")
+        print(f"[주문 {order_id}] 발송 중 오류로 실패: {e}")
 
 
 # ---------------------------------------------------------------------------
@@ -868,9 +900,25 @@ def process_order(order_id: int):
 # ---------------------------------------------------------------------------
 
 scheduler = BackgroundScheduler()
+# 프리미엄처럼 오래 걸리는 생성이 스케줄러를 붙잡지 않도록 별도 스레드에서 돌린다 (정시 발송이 밀리지 않게).
+_generate_pool = ThreadPoolExecutor(max_workers=3)
+
 
 @scheduler.scheduled_job("interval", minutes=1)
 def check_due_orders():
-    due = db.get_due_orders(datetime.now().isoformat())
-    for order in due:
-        process_order(order["id"])
+    now = now_kst()
+    now_iso = now.isoformat()
+    # 1) 예약 시각에 도달한 '생성 완료' 주문은 정시에 발송
+    for order in db.get_orders_by_status("ready"):
+        if order["scheduled_at"] and order["scheduled_at"] <= now_iso:
+            if db.claim_order(order["id"], "ready", "processing"):
+                _deliver(order, order["pdf_path"])
+    # 2) 생성 시작할 때가 된 주문: 즉시 발송 주문, 또는 예약 시각 - 상품별 소요시간이 지난 주문
+    for order in db.get_orders_by_status("pending"):
+        if order["delivery_mode"] == "immediate":
+            start = True
+        else:
+            at = order["scheduled_at"]
+            start = bool(at) and datetime.fromisoformat(at) - timedelta(minutes=lead_minutes(order["product_id"])) <= now
+        if start:
+            _generate_pool.submit(process_order, order["id"])

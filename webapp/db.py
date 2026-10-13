@@ -117,6 +117,28 @@ def get_due_orders(now_iso: str):
         return [dict(r) for r in rows]
 
 
+def claim_order(order_id: int, from_status: str, to_status: str) -> bool:
+    """상태를 원자적으로 바꿔 한 번만 처리되게 한다(동시 실행·중복 처리 방지). 성공하면 True."""
+    with get_conn() as conn:
+        cur = conn.execute("UPDATE orders SET status=? WHERE id=? AND status=?",
+                           (to_status, order_id, from_status))
+        conn.commit()
+        return cur.rowcount == 1
+
+
+def get_orders_by_status(status: str):
+    with get_conn() as conn:
+        rows = conn.execute("SELECT * FROM orders WHERE status = ? ORDER BY id", (status,)).fetchall()
+        return [dict(r) for r in rows]
+
+
+def mark_ready(order_id: int, pdf_path: str):
+    """PDF 생성은 끝났고 예약 시각을 기다리는 상태."""
+    with get_conn() as conn:
+        conn.execute("UPDATE orders SET status='ready', pdf_path=? WHERE id=?", (pdf_path, order_id))
+        conn.commit()
+
+
 def mark_processing(order_id: int):
     _update_status(order_id, "processing")
 
