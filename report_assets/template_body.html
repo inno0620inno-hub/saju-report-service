@@ -15,263 +15,129 @@
   * { box-sizing: border-box; margin: 0; padding: 0; }
   html, body { width: 100%; }
 
-  /* 주의: wkhtmltopdf(구형 WebKit 엔진)는 CSS 커스텀 프로퍼티(:root{--x: ...}
-     + var(--x))를 인식하지 못한다. 값이 조용히 무시되면서 그 배경/색상이
-     그냥 안 나오는 버그로 이어지므로, 색상은 전부 아래처럼 hex를 직접 쓴다.
-     (색상 팔레트 참고용 — 실제로는 각 규칙에 값이 그대로 박혀 있음)
-     ink #16140F / ink-soft #14110C / paper #F3EDE0 / paper-dim #C9C0AC
-     gold #D4AA3A / gold-bright #EBC35A
-     오방색 — 목 #4C7A52 / 화 #B03A2E / 토 #C9A227 / 금 #C9C4B4 / 수 #3A5A8C */
+  /* ---------------------------------------------------------------------
+     [2026-10 개편] 이 문서는 "글자 층"이다.
+     배경(별·성운·금 액자·모서리 문양·마법진)은 report_assets/art/*.pdf 를 build_report.py 가
+     페이지 밑에 깔아 합친다(pypdf). 그래서 아트 모드에서는 body 배경을 칠하지 않는다(PDF가 투명).
+     {{BG_CSS}} = 아트 모드: "background:transparent;"  /  기본 모드(합성 불가 시): 예전 검정 줄무늬 배경.
 
+     wkhtmltopdf(구형 WebKit) 실측 지원표 (0.12.6 patched qt):
+       O  -webkit-gradient(...) / -webkit-linear-gradient / -webkit-radial-gradient
+       O  border-image(9분할), PNG 알파, rgba(), box-shadow·text-shadow 글로우, 인라인 SVG(다각형·그라데이션)
+       X  표준 linear-gradient(), CSS 변수 var(), SVG blur 필터, ✦ ❖ ☰ 같은 특수 기호(글꼴에 없음)
+     ------------------------------------------------------------------- */
   body {
     font-family: 'Cafe24Danjunghae', 'Noto Sans CJK KR', sans-serif;
-    background: #0B0A09 url('bg_stripes.png');
+    {{BG_CSS}}
     color: #F3EDE0;
-    /* 페이지 좌우 여백(wkhtmltopdf --margin-left/right)을 0으로 없애고
-       (풀블리드), 대신 여기 padding으로 어두운 배경 자체의 가장자리와
-       글자/카드/그래프 사이에 15mm 여백을 준다. 이렇게 하면 "검은 화면"의
-       왼쪽·오른쪽 끝에 아무것도 안 닿게 된다. */
-    padding-left: 15mm;
-    padding-right: 15mm;
-    /* 한글은 음절 단위로 아무 데서나 줄바꿈이 되면 한 단어가 어색하게
-       잘려 보인다(예: "흘러가는" → "흘" / "러가는"). word-break: keep-all
-       로 어절(띄어쓰기 단위) 경계에서만 줄바꿈되게 하고, 혹시라도 띄어쓰기
-       없이 아주 긴 문자열이 나오는 경우를 대비해 overflow-wrap으로
-       안전장치를 둔다. */
+    /* 좌우 여백은 wkhtmltopdf 여백(0)이 아니라 padding으로 준다(풀블리드). */
+    padding-left: 82px;      /* CSS 1px = 0.6pt 이므로 약 17.4mm(물리): 액자 안쪽선에서 충분히 띄운다 */
+    padding-right: 82px;
+    /* 한글 어절 단위 줄바꿈(keep-all은 엔진이 무시하므로 build_report._keep_words 가 nowrap 처리) */
     word-break: keep-all;
     overflow-wrap: break-word;
   }
 
-  /* 이 문서는 wkhtmltopdf의 --margin-* 옵션으로 매 물리 페이지마다 동일한
-     여백을 자동으로 받는다 (한 섹션이 여러 페이지로 흘러도 여백이 유지됨).
-     따라서 이 안에서는 페이지 하나짜리 div를 흉내내지 않고, 그냥 자연스럽게
-     아래로 흐르는 문서로 작성한다. */
-
   .section-break { page-break-before: always; }
 
-  .chapter-head {
-    page-break-inside: avoid;
-    page-break-after: avoid;
-  }
-  /* 사용자 피드백: "글씨체는 아까 처음의 두배로 바꿔" — 이번 세션 시작 시점
-     (첫 큰 개편 때 정한) 크기를 기준으로 전부 정확히 2배로 키운다. */
-  .chapter-mark {
-    font-family: 'Noto Serif CJK KR', serif;
-    font-size: 192px;
-    color: #D4AA3A;
-    line-height: 1;
-    margin-bottom: 14px;
-  }
-  .chapter-eyebrow {
-    font-size: 40px;
-    letter-spacing: 0.35em;
-    color: #C9C0AC;
-    margin-bottom: 30px;
-  }
-  .chapter-title {
-    font-family: 'Noto Serif CJK KR', serif;
-    font-size: 128px;
-    font-weight: 700;
-    color: #F3EDE0;
-    margin-bottom: 14px;
-  }
-  .chapter-title-sub {
-    font-size: 52px;
-    color: #EBC35A;
-    margin-bottom: 44px;
-  }
-  .rings { width: 100%; margin: 6px 0 56px 0; height: 120px; position: relative; }
-  .rings div { position: absolute; left: 50%; border: 2px solid #D4AA3A; border-bottom: 6px solid #EBC35A; border-radius: 50%; background: #0B0A09; box-shadow: 0 0 14px 0 #D4AA3A55; }
-  .rings .r1 { width: 100%; height: 56px; margin-left: -50%; top: 62px; }
-  .rings .r2 { width: 78%; height: 46px; margin-left: -39%; top: 36px; }
-  .rings .r3 { width: 56%; height: 38px; margin-left: -28%; top: 12px; }
-  .illust { width: 100%; margin: 0 0 56px 0; border: 2px solid #D4AA3A; border-radius: 10px; overflow: hidden; box-shadow: 0 0 22px 0 #D4AA3A55; page-break-inside: avoid; }
-  .illust { position: relative; }
+  /* ---------- 장 머리: 메달 + 영문 라벨 + 제목 + 부제 + 구분선 ---------- */
+  .chapter-head { page-break-inside: avoid; page-break-after: avoid; text-align: center; }
+  .chapter-medal { position: relative; width: 44mm; height: 44mm; margin: 0 auto 7mm auto; }
+  .chapter-medal img { position: absolute; left: 0; top: 0; width: 44mm; height: 44mm; }
+  .chapter-medal .num { position: absolute; left: 0; top: 0; width: 44mm; height: 44mm; line-height: 44mm; text-align: center;
+    font-family: 'Noto Serif CJK KR', serif; font-weight: 700; color: #F6DC8A; text-shadow: 0 0 14px #D4AA3A; }
+  .num-1 { font-size: 104px; }
+  .num-2 { font-size: 70px; }
+  .num-3 { font-size: 50px; }
+  .chapter-eyebrow { font-size: 33px; letter-spacing: 0.36em; padding-left: 0.36em; color: #C9C0AC; margin-bottom: 20px; }
+  .chapter-title { font-family: 'Noto Serif CJK KR', serif; font-size: 108px; font-weight: 700; color: #F8F1DE; line-height: 1.2; margin-bottom: 14px; text-shadow: 0 0 22px rgba(154,125,255,0.55); }
+  .chapter-title-sub { font-size: 46px; color: #EBC35A; margin-bottom: 26px; }
+  .orn-divider { display: block; width: 100%; margin: 0 0 9mm 0; }
+  /* 삽화: 9분할 액자(border-image) 안에 그림 + 말풍선 */
+  .illust { position: relative; width: 100%; margin: 0 0 10mm 0; border: 8mm solid transparent; -webkit-border-image: url('orn/frame.png') 84 84 84 84 stretch; border-image: url('orn/frame.png') 84 84 84 84 stretch;
+    background: #0B0714; page-break-inside: avoid; }
   .illust img { display: block; width: 100%; }
-  .bubble { position: absolute; right: 4%; bottom: 7%; width: 46%; padding: 20px 26px; background: rgba(11,10,9,0.86); border: 2px solid #EBC35A; border-radius: 30px; box-shadow: 0 0 18px 0 #D4AA3A66; color: #F3EDE0; font-size: 30px; line-height: 1.4; text-align: center; }
+  .bubble { position: absolute; right: 4%; bottom: 7%; width: 48%; padding: 20px 26px; background: rgba(11,7,20,0.88); border: 2px solid #EBC35A; border-radius: 30px; box-shadow: 0 0 18px 0 rgba(235,195,90,0.45); color: #F8F1DE; font-size: 30px; line-height: 1.4; text-align: center; }
   .illust-mid { margin: 40px 0; }
-  .rule {
-    height: 2px;
-    /* 주의: 이 렌더링 엔진(wkhtmltopdf 패치 빌드)은 linear-gradient()를
-       문법(각도/방향 키워드, 퍼센트 스탑 유무)에 관계없이 전부 지원하지
-       않는다 — 실측 결과 background 선언 자체가 통째로 사라진다(각도
-       문법뿐 아니라 "to right" 키워드 문법도 재실측 결과 동일하게 실패).
-       그래서 그라데이션을 완전히 포기하고 단색 + 은은한 글로우로 대체한다. */
-    background: #D4AA3A;
-    box-shadow: 0 0 8px 0 #D4AA3A66;
-    width: 90px;
-    margin-bottom: 44px;
-  }
-  .body-text {
-    font-size: 32px;
-    line-height: 1.55;
-    color: #E7E1D2;
-    /* 문장 단위로 줄을 바꾸다 보니 한 줄 안에 띄어쓰기(줄바꿈 가능 지점)가
-       적어서, 강제로 양쪽을 맞추면(justify) 단어 사이가 부자연스럽게
-       벌어질 수 있다. 그래서 왼쪽 정렬로 자연스럽게 흐르게 둔다. */
-    text-align: left;
-  }
+  .body-text { font-size: 32px; line-height: 1.55; color: #E9E3D4; text-align: left; }
   .body-text p { margin-bottom: 28px; }
 
-  /* ---------- 사주 원국 명패(시그니처) ----------
-     구형 렌더링 엔진(wkhtmltopdf)에서는 flexbox의 균등 배분이 찌그러지는
-     경우가 있어, 확실하게 4등분되는 table 레이아웃을 쓴다. */
-  /* 사용자 피드백: 카드/그래프든 글자든 페이지 여백은 전부 동일해야 한다.
-     그래서 본문 글자와 같은 폭(100%)을 쓰고, 대신 안의 글자 크기를 키워서
-     답답해 보이는 문제를 해결한다(여백을 더 파는 대신 폰트를 키움). */
-  .myeongsik {
-    display: table;
-    width: 100%;
-    table-layout: fixed;
-    margin: 16px 0 44px 0;
-    page-break-inside: avoid;
-  }
-  .myeongsik-cell {
-    display: table-cell;
-    padding: 0 7px;
-  }
+  /* ---------- 사주 원국 명패 (표 레이아웃: 구형 엔진에서 균등 4등분) ---------- */
+  .myeongsik { display: table; width: 100%; table-layout: fixed; margin: 16px 0 44px 0; page-break-inside: avoid; }
+  .myeongsik-cell { display: table-cell; padding: 0 7px; }
   .myeongsik-cell:first-child { padding-left: 0; }
   .myeongsik-cell:last-child { padding-right: 0; }
   .pillar-card {
-    background: #14110C;
-    box-shadow: 0 0 18px 0 #D4AA3A33, inset 0 1px 0 #EBC35A66;
-    border: 1px solid rgba(212,170,58,0.6);
-    border-radius: 6px;
-    padding: 22px 10px;
+    background: #150E27;
+    background: -webkit-gradient(linear, left top, left bottom, from(#241848), to(#0E0A1C));
+    border: 4px double #D4AA3A;
+    border-radius: 8px;
+    box-shadow: 0 0 22px 0 rgba(212,170,58,0.34), inset 0 0 20px 0 rgba(154,125,255,0.22);
+    padding: 20px 8px 18px 8px;
     text-align: center;
   }
-  .pillar-label {
-    font-size: 36px;
-    color: #C9C0AC;
-    letter-spacing: 0.2em;
-    margin-bottom: 20px;
-  }
-  .pillar-char {
-    font-family: 'Noto Serif CJK KR', serif;
-    font-size: 128px;
-    font-weight: 700;
-    line-height: 1.3;
-  }
-  .pillar-hanja {
-    font-size: 36px;
-    color: #C9C0AC;
-    margin-top: 10px;
-  }
-  .oheng-목 { color: #4C7A52; }
-  .oheng-화 { color: #B03A2E; }
-  .oheng-토 { color: #C9A227; }
-  .oheng-금 { color: #C9C4B4; }
-  .oheng-수 { color: #3A5A8C; }
+  .pillar-label { font-size: 33px; color: #EBC35A; letter-spacing: 0.14em; margin-bottom: 16px; padding-bottom: 14px; border-bottom: 1px solid rgba(212,170,58,0.5); }
+  .pillar-char { font-family: 'Noto Serif CJK KR', serif; font-size: 118px; font-weight: 700; line-height: 1.22; text-shadow: 0 0 16px rgba(255,255,255,0.18); }
+  .pillar-hanja { font-size: 34px; color: #C9C0AC; margin-top: 10px; }
+  /* 오행 글자색 (어두운 보랏빛 바탕에서 또렷하도록 조금 밝게) */
+  .oheng-목 { color: #5FC27A; }
+  .oheng-화 { color: #FF6B55; }
+  .oheng-토 { color: #F0C84C; }
+  .oheng-금 { color: #ECE8DC; }
+  .oheng-수 { color: #5A9EF0; }
 
-  /* ---------- 오행 분포 바 ----------
-     밋밋해 보인다는 피드백으로, 그냥 페이지 배경 위에 막대만 떠 있던 것을
-     카드(패널)로 감싸고, 각 오행마다 한자 배지를 달고, 막대는 그라데이션
-     + 은은한 글로우(box-shadow)를 줘서 입체감을 살렸다. */
+  /* ---------- 오행 분포: 레이더 + 막대 ---------- */
+  .oheng-block { margin-top: 12mm; page-break-inside: avoid; }
+  .oheng-radar { text-align: center; margin: 1mm 0 3mm 0; page-break-inside: avoid; }
   .oheng-panel {
-    background: #14110C;
-    border: 1px solid rgba(212,170,58,0.6);
+    background: #150E27;
+    background: -webkit-gradient(linear, left top, left bottom, from(#1F1540), to(#0D091B));
+    border: 4px double #D4AA3A;
     border-radius: 10px;
-    padding: 36px 34px 14px 34px;
-    margin: 24px 0 50px 0;
+    box-shadow: 0 0 26px 0 rgba(212,170,58,0.28), inset 0 0 22px 0 rgba(154,125,255,0.16);
+    padding: 26px 30px 6px 30px;
+    margin: 12px 0 30px 0;
     page-break-inside: avoid;
   }
-  .oheng-row { display: table; width: 100%; table-layout: fixed; margin-bottom: 26px; }
+  .oheng-row { display: table; width: 100%; table-layout: fixed; margin-bottom: 18px; }
   .oheng-name { display: table-cell; width: 150px; font-size: 40px; color: #F3EDE0; vertical-align: middle; }
-  .oheng-badge {
-    display: inline-block;
-    width: 56px; height: 56px; line-height: 52px;
-    border: 2px solid; border-radius: 50%;
-    text-align: center;
-    font-family: 'Noto Serif CJK KR', serif; font-size: 30px; font-weight: 700;
-    background: rgba(0,0,0,0.18);
-    vertical-align: middle;
-  }
+  .oheng-badge { display: inline-block; width: 56px; height: 56px; line-height: 52px; border: 2px solid; border-radius: 50%; text-align: center;
+    font-family: 'Noto Serif CJK KR', serif; font-size: 30px; font-weight: 700; background: rgba(0,0,0,0.3); vertical-align: middle; }
   .oheng-name-kr { display: inline-block; vertical-align: middle; margin-left: 14px; }
   .oheng-track-cell { display: table-cell; vertical-align: middle; padding: 0 20px; }
-  .oheng-track { height: 28px; background: rgba(243,237,224,0.08); border: 1px solid rgba(243,237,224,0.06); border-radius: 14px; overflow: hidden; }
+  .oheng-track { height: 28px; background: rgba(243,237,224,0.09); border: 1px solid rgba(243,237,224,0.14); border-radius: 14px; overflow: hidden; }
   .oheng-fill { height: 100%; border-radius: 14px; }
   .oheng-count { display: table-cell; width: 130px; font-size: 36px; color: #C9C0AC; text-align: right; vertical-align: middle; white-space: nowrap; }
   .oheng-pct { display: inline-block; margin-left: 10px; font-size: 24px; color: #8C8676; }
 
   /* ---------- 대운 타임라인 ---------- */
-  .daeun-timeline {
-    display: table;
-    width: 100%;
-    table-layout: fixed;
-    margin: 46px 0;
-    border-top: 1px solid rgba(212,170,58,0.5);
-    padding-top: 36px;
-    page-break-inside: avoid;
-  }
+  .daeun-timeline { display: table; width: 100%; table-layout: fixed; margin: 46px 0; border-top: 2px solid #D4AA3A; padding-top: 36px; page-break-inside: avoid; }
   .daeun-step { display: table-cell; text-align: center; position: relative; padding: 8px 4px; }
-  .daeun-step::before {
-    content: "";
-    position: absolute; top: -31px; left: 50%; transform: translateX(-50%);
-    width: 10px; height: 10px; border-radius: 50%;
-    background: #D4AA3A;
-  }
+  .daeun-step::before { content: ""; position: absolute; top: -33px; left: 50%; margin-left: -8px; width: 14px; height: 14px; border-radius: 50%; background: #EBC35A; box-shadow: 0 0 12px 2px rgba(235,195,90,0.7); }
   .daeun-age { font-size: 34px; color: #C9C0AC; margin-bottom: 12px; }
   .daeun-gz { font-family: 'Noto Serif CJK KR', serif; font-size: 56px; font-weight: 700; }
 
-  /* 사용자 피드백: 모든 요소가 같은 여백을 써야 하므로 본문과 같은 폭(100%)
-     을 쓴다. */
-  .callout {
-    background: #14110C;
-    border-left: 5px solid #D4AA3A;
-    padding: 32px 34px;
-    font-size: 48px;
-    color: #C9C0AC;
-    line-height: 1.5;
-    width: 100%;
-    margin-top: 32px;
-    page-break-inside: avoid;
-  }
+  /* 콜아웃: 액자 + 어두운 바탕 */
+  .callout { border: 8mm solid transparent; -webkit-border-image: url('orn/frame.png') 84 84 84 84 stretch; border-image: url('orn/frame.png') 84 84 84 84 stretch;
+    background: #120C22; background: -webkit-gradient(linear, left top, left bottom, from(#1D1438), to(#0E0A1B));
+    font-size: 40px; color: #D9D1BC; line-height: 1.55; width: 100%; margin-top: 32px; text-align: center; page-break-inside: avoid; }
 
   /* ---------- 목차 ---------- */
-  /* space-between 플렉스가 이 렌더링 엔진(wkhtmltopdf)에서는 폭이 좁게
-     찌부러져서 나오는 경우가 있어, 확실하게 양끝 정렬되는 table 레이아웃을
-     쓴다. */
-  .toc-item {
-    display: table;
-    width: 100%;
-    table-layout: fixed;
-    padding: 26px 0;
-    border-bottom: 1px solid rgba(212,170,58,0.35);
-    page-break-inside: avoid;
-  }
-  .toc-mark {
-    display: table-cell;
-    font-family: 'Noto Serif CJK KR', serif; color: #D4AA3A; font-size: 64px; width: 120px;
-    vertical-align: baseline;
-  }
-  .toc-name {
-    display: table-cell;
-    font-size: 56px; color: #F3EDE0;
-    vertical-align: baseline;
-  }
-  .toc-page {
-    display: table-cell;
-    font-size: 44px; color: #C9C0AC;
-    width: 150px; text-align: right; white-space: nowrap;
-    vertical-align: baseline;
-  }
+  .toc-head { text-align: center; }
+  .toc-item { display: table; width: 100%; table-layout: fixed; padding: 26px 0; border-bottom: 1px solid rgba(212,170,58,0.4); page-break-inside: avoid; }
+  .toc-mark { display: table-cell; font-family: 'Noto Serif CJK KR', serif; color: #EBC35A; font-size: 60px; width: 130px; vertical-align: baseline; text-shadow: 0 0 12px rgba(212,170,58,0.6); }
+  .toc-name { display: table-cell; font-size: 54px; color: #F3EDE0; vertical-align: baseline; }
+  .toc-page { display: table-cell; font-size: 42px; color: #C9C0AC; width: 150px; text-align: right; white-space: nowrap; vertical-align: baseline; }
 
-  .watermark {
-    position: relative;
-    height: 0;
-  }
-  .watermark-mark {
-    position: absolute;
-    top: 260px; left: 38%; transform: translate(-50%,0) rotate(-30deg);
-    font-size: 42px; font-weight: 900; color: rgba(212,175,90,0.18); letter-spacing: 2px;
-    white-space: nowrap; z-index: 999; pointer-events: none;
-  }
+  .end-orn { margin: 16mm 0 0 0; text-align: center; page-break-inside: avoid; }
+  .end-orn img { display: block; width: 100%; margin-bottom: 4mm; }
+  .end-orn div { font-size: 28px; letter-spacing: 0.5em; padding-left: 0.5em; color: #C9C0AC; }
 
-  /* 목차 페이지번호 계산용 숨김 마커. 화면에는 배경색과 같아서 안 보이지만,
-     실제 텍스트로 렌더링되어야 pdftotext로 어느 페이지에 있는지 찾을 수 있다
-     (opacity:0 이나 극소 font-size는 렌더러가 텍스트 레이어에서 아예 빼버릴 수
-     있어서 쓰지 않는다). */
-  .pagemark { position: absolute; color: #16140F; font-size: 8px; line-height: 1; }
+  .watermark { position: relative; height: 0; }
+  .watermark-mark { position: absolute; top: 260px; left: 38%; transform: translate(-50%,0) rotate(-30deg); font-size: 42px; font-weight: 900; color: rgba(212,175,90,0.18); letter-spacing: 2px; white-space: nowrap; z-index: 999; pointer-events: none; }
+
+  /* 목차 페이지번호 계산용 숨김 마커: 실제 텍스트로 렌더링돼야 pdftotext가 찾는다(1% 투명도로 눈에는 안 보임) */
+  .pagemark { position: absolute; color: rgba(255,255,255,0.012); font-size: 8px; line-height: 1; }
 </style>
 </head>
 <body>

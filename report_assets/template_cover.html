@@ -9,91 +9,62 @@
   html, body { width: 100%; height: 100%; }
   body {
     font-family: 'Cafe24Danjunghae', 'Noto Sans CJK KR', sans-serif;
-    background: #0B0A09 url('bg_stripes.png');
+    {{BG_CSS}}
     color: #F3EDE0;
-    width: 220mm;
-    height: 391.11mm;
+    width: 100%;
+    height: 1848px;          /* 페이지 높이 1109pt ÷ 0.6 */
     position: relative;
-    display: table;
     word-break: keep-all;
     overflow-wrap: break-word;
   }
-  .inner {
-    display: table-cell;
-    vertical-align: middle;
-    text-align: center;
-    padding: 0 20mm;
-  }
-  .eyebrow {
-    letter-spacing: 0.5em;
-    font-size: 18px;
-    color: #D4AA3A;
-    margin-bottom: 40px;
-  }
-  .hanja-big {
-    font-family: 'Noto Serif CJK KR', serif;
-    font-size: 170px;
-    font-weight: 700;
-    color: #F3EDE0;
-    line-height: 1.05;
-    margin-bottom: 10px;
-  }
-  .title-kr {
-    font-family: 'Noto Serif CJK KR', serif;
-    font-size: 52px;
-    font-weight: 600;
-    color: #EBC35A;
-    margin-bottom: 56px;
-  }
-  .divider {
-    width: 90px; height: 2px; background: #D4AA3A;
-    margin: 0 auto 56px auto;
-  }
-  .subject-name {
-    font-size: 38px;
-    color: #F3EDE0;
-    margin-bottom: 14px;
-    font-weight: 700;
-  }
-  .subject-meta {
-    font-size: 22px;
-    color: #C9C0AC;
-    letter-spacing: 0.05em;
-  }
-  .footer-mark {
-    position: absolute;
-    bottom: 14mm;
-    left: 0; right: 0;
-    text-align: center;
-    font-size: 16px;
-    color: #C9C0AC;
-    letter-spacing: 0.3em;
-  }
-  .arch { position: absolute; left: 50%; top: 11%; width: 160mm; height: 222mm; margin-left: -80mm; border: 2px solid #D4AA3A; border-radius: 50%; box-shadow: 0 0 30px 0 #D4AA3A44; }
-  .podium div { position: absolute; left: 50%; border: 2px solid #D4AA3A; border-bottom: 7px solid #EBC35A; border-radius: 50%; background: #0B0A09; box-shadow: 0 0 20px 0 #D4AA3A55; }
+  .watermark { position: absolute; top: 45%; left: 38%; transform: translate(-50%,-50%) rotate(-30deg); font-size: 42px; font-weight: 900; color: rgba(212,175,90,0.18); letter-spacing: 2px; white-space: nowrap; z-index: 999; pointer-events: none; }
+
+  /* ===== 기본 모드(아트 합성 불가 시): 예전 표지 그대로 ===== */
+  .art .legacy-only { display: none; }
+  .legacy .art-only { display: none; }
+  .legacy-only .inner { display: table-cell; vertical-align: middle; text-align: center; padding: 0 20mm; }
+  .legacy-only { display: table; width: 100%; height: 1848px; }
+  .eyebrow { letter-spacing: 0.5em; font-size: 18px; color: #D4AA3A; margin-bottom: 40px; }
+  .hanja-big { font-family: 'Noto Serif CJK KR', serif; font-size: 170px; font-weight: 700; color: #F3EDE0; line-height: 1.05; margin-bottom: 10px; }
+  .title-kr { font-family: 'Noto Serif CJK KR', serif; font-size: 52px; font-weight: 600; color: #EBC35A; margin-bottom: 56px; }
+  .divider { width: 90px; height: 2px; background: #D4AA3A; margin: 0 auto 56px auto; }
+  .subject-name { font-size: 38px; color: #F3EDE0; margin-bottom: 14px; font-weight: 700; }
+  .subject-meta { font-size: 22px; color: #C9C0AC; letter-spacing: 0.05em; }
+  .footer-mark { position: absolute; bottom: 14mm; left: 0; right: 0; text-align: center; font-size: 16px; color: #C9C0AC; letter-spacing: 0.3em; }
+  .arch { position: absolute; left: 50%; top: 11%; width: 160mm; height: 222mm; margin-left: -80mm; border: 2px solid #D4AA3A; border-radius: 50%; box-shadow: 0 0 30px 0 rgba(212,170,58,0.27); }
+  .podium div { position: absolute; left: 50%; border: 2px solid #D4AA3A; border-bottom: 7px solid #EBC35A; border-radius: 50%; background: #0B0A09; box-shadow: 0 0 20px 0 rgba(212,170,58,0.33); }
   .podium .p1 { width: 190mm; height: 22mm; margin-left: -95mm; bottom: 38mm; }
   .podium .p2 { width: 150mm; height: 18mm; margin-left: -75mm; bottom: 50mm; }
   .podium .p3 { width: 110mm; height: 14mm; margin-left: -55mm; bottom: 61mm; }
-  .watermark {
-    position: absolute;
-    top: 45%; left: 38%; transform: translate(-50%,-50%) rotate(-30deg);
-    font-size: 42px; font-weight: 900; color: rgba(212,175,90,0.18); letter-spacing: 2px;
-    white-space: nowrap; z-index: 999; pointer-events: none;
-  }
+
+  /* ===== 아트 모드: 고정 글자(命·제목·액자·마법진)는 배경 아트에 구워져 있고, 여기선 바뀌는 글자만 찍는다 =====
+     좌표 주의: wkhtmltopdf는 CSS 1px = 0.6pt(확대율 0.8)로 그린다 → mm 단위가 물리 mm와 다르다(실측).
+     배경 아트는 832px 기준(1px=0.7492pt)이므로 아트 y좌표 × 1.2487 = 이 문서의 CSS px. */
+  .art-only .abs { position: absolute; left: 0; right: 0; text-align: center; }
+  .art-only .name { top: {{NAME_TOP}}; line-height: 60px; font-size: 46px; font-weight: 700; color: #F8F1DE; letter-spacing: 0.08em; text-shadow: 0 0 18px rgba(235,195,90,0.55); }
+  .art-only .meta { top: {{META_TOP}}; line-height: 34px; font-size: 24px; color: #CFC6B0; letter-spacing: 0.06em; }
+  .art-only .foot { top: 1742px; line-height: 24px; font-size: 17px; color: #C9C0AC; letter-spacing: 0.34em; padding-left: 0.34em; }
 </style>
 </head>
-<body>
+<body class="{{MODE}}">
 {{WATERMARK}}
-<div class="arch"></div>
-<div class="podium"><div class="p1"></div><div class="p2"></div><div class="p3"></div></div>
-<div class="inner">
-  <div class="eyebrow">사 주 명 식 해 설</div>
-  <div class="hanja-big">命</div>
-  <div class="title-kr">사주 명식 리포트</div>
-  <div class="divider"></div>
-  <div class="subject-name">{{NAME}}</div>
-  <div class="subject-meta">{{BIRTH_INFO}}</div>
+<div class="legacy-only">
+  <div class="arch"></div>
+  <div class="podium"><div class="p1"></div><div class="p2"></div><div class="p3"></div></div>
+  <div class="inner">
+    <div class="eyebrow">사 주 명 식 해 설</div>
+    <div class="hanja-big">命</div>
+    <div class="title-kr">사주 명식 리포트</div>
+    <div class="divider"></div>
+    <div class="subject-name">{{NAME}}</div>
+    <div class="subject-meta">{{BIRTH_INFO}}</div>
+  </div>
+  <div class="footer-mark">SAJU REPORT · {{ISSUE_DATE}}</div>
 </div>
-<div class="footer-mark">SAJU REPORT · {{ISSUE_DATE}}</div>
+<div class="art-only">
+  <div class="abs name">{{NAME}}</div>
+  <div class="abs meta">{{BIRTH_INFO}}</div>
+  <div class="abs foot">SAJU REPORT · {{ISSUE_DATE}}</div>
+</div>
 </body>
 </html>

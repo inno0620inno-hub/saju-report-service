@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="ko"><head><meta charset="utf-8">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@400;600;700;900&display=swap" rel="stylesheet">
+<style>html,body{margin:0;padding:0;background:#000}#p{position:relative;width:832px;height:1478px;overflow:hidden}#p svg{position:absolute;left:0;top:0}</style>
+</head><body><div id="p"></div>
+<script src="art_common.js"></script>
+<script>
+const M = new URLSearchParams(location.search).get('m') || 'page';
+const p = document.getElementById('p');
+const ID = 'z';
+const SVG = inner => `<svg width="${AW}" height="${AH}" viewBox="0 0 ${AW} ${AH}" xmlns="http://www.w3.org/2000/svg">${defs(ID)}${inner}</svg>`;
+const G = `url(#${ID}g)`;
+
+/* 둥근 지붕 아치(문) 경로: 중심 cx, 위 top, 폭 w, 아래 bottom */
+const arch = (cx, top, w, bottom) => `M${cx - w / 2} ${bottom}V${top + w / 2}A${w / 2} ${w / 2} 0 0 1 ${cx + w / 2} ${top + w / 2}V${bottom}`;
+/* 부채꼴 광선(아르데코 선버스트): 점 (cx,cy)에서 위로 퍼짐 */
+function sunburst(cx, cy, n, len, a0, a1, w = .9, op = .1) {
+  let s = '';
+  for (let i = 0; i <= n; i++) {
+    const a = (a0 + (a1 - a0) * i / n) * Math.PI / 180;
+    s += `<line x1="${cx}" y1="${cy}" x2="${f1(cx + Math.sin(a) * len)}" y2="${f1(cy - Math.cos(a) * len)}" stroke="${G}" stroke-width="${i % 2 ? w * .6 : w}" opacity="${i % 2 ? op * .6 : op}"/>`;
+  }
+  return s;
+}
+const ornLine = (cx, cy, half = 150) => `<line x1="${cx - half}" y1="${cy}" x2="${cx - 22}" y2="${cy}" stroke="${G}" stroke-width="1.4"/><line x1="${cx + 22}" y1="${cy}" x2="${cx + half}" y2="${cy}" stroke="${G}" stroke-width="1.4"/>` +
+  diamond(cx, cy, 16, 16, `fill="${G}"`) + diamond(cx - 34, cy, 7, 7, `fill="${G}"`) + diamond(cx + 34, cy, 7, 7, `fill="${G}"`) +
+  `<circle cx="${cx - half - 6}" cy="${cy}" r="2.2" fill="${G}"/><circle cx="${cx + half + 6}" cy="${cy}" r="2.2" fill="${G}"/>`;
+
+function pageArt(opener) {
+  p.style.cssText += pageBG(opener ? 'radial-gradient(58% 22% at 50% 10%, rgba(154,125,255,.34), transparent 72%), radial-gradient(44% 14% at 50% 15%, rgba(212,175,90,.2), transparent 72%),'
+                                   : 'radial-gradient(60% 18% at 50% 2%, rgba(120,84,255,.22), transparent 72%),', false);
+  let s = starField({ n: opener ? 150 : 120, seed: opener ? 21 : 5, alpha: [.08, .42], flares: opener ? 8 : 5, size: [.5, 1.3] });
+  s += bokeh({ n: opener ? 10 : 8, seed: opener ? 4 : 9, r: [8, 26], alpha: [.03, .08] });
+  // 장 도입 쪽: 마법진 워터마크는 액자 안쪽에서만 보이도록 잘라낸다
+  if (opener) s += `<clipPath id="${ID}in"><path d="${chamfer(46, 46, AW - 46, AH - 46, 18)}"/></clipPath><g clip-path="url(#${ID}in)">${magicCircle(ID, AW / 2, 330, 860, { glyph: '', orbs: true, text: true, core: false, alpha: .14 })}</g>`;
+  s += frameSVG(ID, { cartouche: true });
+  p.innerHTML = SVG(s);
+}
+
+function coverArt() {
+  p.style.cssText += pageBG('radial-gradient(64% 30% at 50% 36%, rgba(120,84,255,.32), transparent 72%), radial-gradient(40% 16% at 50% 88%, rgba(212,175,90,.22), transparent 72%),');
+  const cx = AW / 2;
+  let s = `<ellipse cx="${cx - 190}" cy="360" rx="330" ry="250" fill="url(#${ID}vio)" opacity=".5"/><ellipse cx="${cx + 210}" cy="760" rx="300" ry="230" fill="url(#${ID}vio)" opacity=".35"/>`;
+  s += `<ellipse cx="${cx + 130}" cy="250" rx="240" ry="160" fill="url(#${ID}glow)" opacity=".16"/><ellipse cx="${cx - 220}" cy="1010" rx="260" ry="190" fill="url(#${ID}glow)" opacity=".14"/>`;
+  s += starField({ n: 340, seed: 11, alpha: [.18, .9], flares: 20, size: [.5, 1.9] });
+  s += bokeh({ n: 30, seed: 17, r: [6, 30], alpha: [.05, .17] });
+  s += sunburst(cx, 1250, 48, 1180, -64, 64, 1.1, .2);                       // 아르데코 선버스트
+  s += `<circle cx="${cx}" cy="520" r="400" fill="url(#${ID}vio)" opacity=".75"/>`;
+  s += frameSVG(ID, { m1: 26, m2: 40, cartouche: false });
+  // 운명의 문(아치): 안쪽을 어둡게 눌러 별빛과 분리
+  const aTop = 118, aW = 640, aBot = 1200;
+  s += `<path d="${arch(cx, aTop, aW, aBot)}V${aBot}H${cx - aW / 2}Z" fill="rgba(6,3,14,.62)"/>`;
+  s += `<g filter="url(#${ID}blur)" opacity=".7"><path d="${arch(cx, aTop, aW, aBot)}" fill="none" stroke="${G}" stroke-width="5"/></g>`;
+  s += `<path d="${arch(cx, aTop, aW, aBot)}" fill="none" stroke="${G}" stroke-width="3"/>`;
+  s += `<path d="${arch(cx, aTop + 14, aW - 28, aBot)}" fill="none" stroke="${G}" stroke-width="1.2" opacity=".85"/>`;
+  s += `<path d="${arch(cx, aTop + 26, aW - 52, aBot)}" fill="none" stroke="${G}" stroke-width=".8" opacity=".6"/>`;
+  s += `<path d="${arch(cx, aTop - 16, aW + 36, aBot)}" fill="none" stroke="${G}" stroke-width=".8" opacity=".55"/>`;
+  // 바깥 아치선을 따라 오행 보석(木火土金水 색)과 금 마름모를 번갈아 박는다
+  const R2 = (aW + 36) / 2, gcy = aTop - 16 + R2;
+  for (let i = 0; i <= 12; i++) {
+    const th = (180 + i * 15) * Math.PI / 180, gx = cx + R2 * Math.cos(th), gy = gcy + R2 * Math.sin(th);
+    if (i === 6) continue;                                                 // 정중앙은 쐐기돌 자리
+    if (i % 2) { const [, col] = ELEM[(i >> 1) % 5]; s += `<circle cx="${f1(gx)}" cy="${f1(gy)}" r="9" fill="${col}" opacity=".28" filter="url(#${ID}blur)"/><circle cx="${f1(gx)}" cy="${f1(gy)}" r="5.2" fill="${col}" stroke="${G}" stroke-width="1.6"/><circle cx="${f1(gx - 1.4)}" cy="${f1(gy - 1.6)}" r="1.5" fill="#fff" opacity=".8"/>`; }
+    else s += diamond(gx, gy, 9, 12, `fill="${G}"`);
+  }
+  // 아치 꼭대기 쐐기돌 + 구슬
+  s += diamond(cx, aTop - 18, 30, 40, `fill="${G}"`) + diamond(cx, aTop - 18, 12, 18, 'fill="#12081f"');
+  [-1, 1].forEach(d => { s += diamond(cx + d * 40, aTop - 12, 10, 10, `fill="${G}"`); s += `<circle cx="${cx + d * 62}" cy="${aTop - 6}" r="2.6" fill="${G}"/>`; });
+  // 마법진 + 큰 命
+  const mcy = 560;
+  s += `<circle cx="${cx}" cy="${mcy}" r="262" fill="url(#${ID}glow)" opacity=".28"/>`;
+  s += magicCircle(ID, cx, mcy, 520, { glyph: '', orbs: true, text: true, core: false, alpha: 1, glow: true });
+  s += `<circle cx="${cx}" cy="${mcy}" r="74" fill="rgba(10,6,24,.9)" stroke="${G}" stroke-width="2.2"/><circle cx="${cx}" cy="${mcy}" r="66" fill="none" stroke="${G}" stroke-width=".9"/>`;
+  s += `<text x="${cx}" y="${mcy}" dy=".36em" text-anchor="middle" font-size="98" font-weight="900" font-family="'Noto Serif KR',serif" fill="${G}">命</text>`;
+  // 위 글귀·제목
+  s += `<text x="${cx}" y="236" text-anchor="middle" font-size="19" letter-spacing="13" font-family="'Noto Serif KR',serif" font-weight="600" fill="#e9c870">사 주 명 식 해 설</text>`;
+  s += ornLine(cx, 262, 120);
+  s += `<g filter="url(#${ID}blur)" opacity=".55"><text x="${cx}" y="900" text-anchor="middle" font-size="64" font-weight="700" letter-spacing="5" font-family="'Noto Serif KR',serif" fill="#ffd878">사주 명식 리포트</text></g>`;
+  s += `<text x="${cx}" y="900" text-anchor="middle" font-size="64" font-weight="700" letter-spacing="5" font-family="'Noto Serif KR',serif" fill="${G}">사주 명식 리포트</text>`;
+  s += ornLine(cx, 950, 190);
+  // 받침대(3단 타원) + 빛
+  s += `<ellipse cx="${cx}" cy="1262" rx="300" ry="64" fill="url(#${ID}glow)" opacity=".45"/>`;
+  [[1318, 336, 46], [1282, 262, 36], [1252, 190, 26]].forEach(([cy, rx, ry], i) => {
+    s += `<ellipse cx="${cx}" cy="${cy}" rx="${rx}" ry="${ry}" fill="#0b0618" stroke="${G}" stroke-width="${2.4 - i * .3}"/>`;
+    s += `<ellipse cx="${cx}" cy="${cy + 4}" rx="${rx}" ry="${ry}" fill="none" stroke="${G}" stroke-width="3" opacity=".4"/>`;
+  });
+  p.innerHTML = SVG(s);
+}
+
+if (M === 'cover') coverArt(); else pageArt(M === 'opener');
+document.fonts.load('700 60px "Noto Serif KR"', '사주명식리포트命子丑寅卯辰巳午未申酉戌亥木火土金水').then(() => document.fonts.ready).then(() => { document.title = 'ready'; });
+</script></body></html>

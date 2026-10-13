@@ -8,3 +8,4 @@ webapp/generated_reports/
 report_assets/_rendered*.html
 *.log
 saju-report-service/
+report_assets/art_src/sample_report.pdf

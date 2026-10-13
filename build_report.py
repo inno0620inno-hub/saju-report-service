@@ -30,19 +30,29 @@ import subprocess
 import os
 import re
 import json
+import math
 import random
+import datetime
 from saju_core import calculate_saju
 from report_prompts import SECTION_SPECS
 
+try:                                   # 배경 아트 합성용(순수 파이썬). 없으면 예전 방식으로 자동 폴백
+    from pypdf import PdfReader, PdfWriter, Transformation
+    _HAVE_PYPDF = True
+except Exception:                      # pragma: no cover
+    _HAVE_PYPDF = False
+
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 ASSETS_DIR = os.path.join(SCRIPT_DIR, "report_assets")
+ART_DIR = os.path.join(ASSETS_DIR, "art")      # 미리 구워 둔 배경 아트(cover/page/opener .pdf) — report_assets/art_src/build_art.py 로 생성
 
 # wkhtmltopdf(구형 WebKit 엔진)는 CSS 커스텀 프로퍼티(var(--x))를 인식하지
 # 못해서 배경색이 그냥 안 먹는 문제가 있었다. 그래서 오행 막대그래프처럼
 # 파이썬에서 동적으로 색을 꽂아 넣는 곳은 var() 대신 실제 hex 값을 직접 쓴다.
-OHENG_COLOR_HEX = {"목": "#4C7A52", "화": "#B03A2E", "토": "#C9A227", "금": "#C9C4B4", "수": "#3A5A8C"}
+# (2026-10: 어두운 보랏빛 바탕에서 또렷하도록 이전보다 채도·명도를 올림)
+OHENG_COLOR_HEX = {"목": "#3F9E5C", "화": "#D84A36", "토": "#C99A22", "금": "#BDB9AB", "수": "#3C78D0"}
 # 오행 바를 그라데이션으로 칠할 때 쓰는, 각 색의 밝은 버전(입체감/윤기를 위함).
-OHENG_COLOR_LIGHT = {"목": "#7FB386", "화": "#E0685A", "토": "#EAC766", "금": "#EDEAE0", "수": "#6E93C2"}
+OHENG_COLOR_LIGHT = {"목": "#7FE0A0", "화": "#FF8F78", "토": "#F7DA7A", "금": "#F4F1E8", "수": "#80B6FF"}
 OHENG_HANJA = {"목": "木", "화": "火", "토": "土", "금": "金", "수": "水"}
 HANJA_NUMERALS = ["一", "二", "三", "四", "五", "六", "七", "八", "九", "十",
                    "十一", "十二", "十三", "十四", "十五", "十六", "十七", "十八", "十九", "二十",
@@ -66,8 +76,8 @@ PAGE_HEIGHT = "391.11mm"  # 220mm * 16/9
 # 자체의 가장자리와 글자 사이에 여백이 생기게 한다(template_body.html의
 # body { padding-left/right: 15mm } 참고). 위/아래는 기존 방식(페이지 번호
 # 자리 확보) 그대로 유지.
-BODY_MARGIN_TOP = "22mm"
-BODY_MARGIN_BOTTOM = "22mm"
+BODY_MARGIN_TOP = "28mm"      # 모서리 연꽃 문양(배경 아트)과 첫 줄이 겹치지 않도록 22→28mm
+BODY_MARGIN_BOTTOM = "28mm"
 BODY_MARGIN_LEFT = "0"
 BODY_MARGIN_RIGHT = "0"
 
@@ -135,7 +145,7 @@ def _illustration_html(section_key, used):
     used.add(pick)
     line = random.choice(_BUBBLES.get(theme, _BUBBLES["overview"]))
     return (f'<div class="illust"><img src="illustrations/{pick}.jpg">'
-            f'<div class="bubble">{line}</div></div>')
+            f'<div class="bubble">{_keep_words(line)}</div></div>')
 
 
 def render_pillar_cards(data):
@@ -165,21 +175,59 @@ def render_oheng_bars(data):
         color_hex = OHENG_COLOR_HEX[name]
         light_hex = OHENG_COLOR_LIGHT[name]
         hanja = OHENG_HANJA[name]
-        # 주의: 이 렌더링 엔진(wkhtmltopdf 패치 빌드)은 linear-gradient()를
-        # 문법(각도/방향 키워드, 퍼센트 스탑 유무)에 관계없이 전부 지원하지
-        # 않는다 — 실측 결과 background 선언 자체가 통째로 사라진다.
-        # 그래서 그라데이션 대신 "단색 + box-shadow 글로우 + 밝은색 얇은
-        # 하이라이트 테두리"로 입체감을 낸다(둘 다 렌더링 확인됨).
+        # 주의: 이 렌더링 엔진(wkhtmltopdf 0.12.6 patched qt)은 표준 linear-gradient()는
+        # 지원하지 않지만(background 선언이 통째로 사라짐) 접두사 문법
+        # -webkit-gradient(...) 는 지원한다(2026-10 실측). 단색을 먼저 깔아 두고
+        # 그 뒤에 접두사 그라데이션을 덧써서, 어느 쪽이든 막대가 보이게 한다.
         rows.append(f"""
         <div class="oheng-row">
           <div class="oheng-name">
-            <span class="oheng-badge" style="border-color:{color_hex}; color:{color_hex};">{hanja}</span>
+            <span class="oheng-badge" style="border-color:{light_hex}; color:{light_hex};">{hanja}</span>
             <span class="oheng-name-kr">{name}</span>
           </div>
-          <div class="oheng-track-cell"><div class="oheng-track"><div class="oheng-fill" style="width:{bar_pct}%; background:{color_hex}; box-shadow:0 0 12px 1px {color_hex}99, inset 0 2px 0 {light_hex}66;"></div></div></div>
+          <div class="oheng-track-cell"><div class="oheng-track"><div class="oheng-fill" style="width:{bar_pct}%; background:{color_hex}; background:-webkit-gradient(linear, left top, right top, from({color_hex}), to({light_hex})); box-shadow:0 0 12px 1px {color_hex}99;"></div></div></div>
           <div class="oheng-count">{count}개<span class="oheng-pct">{share_pct}%</span></div>
         </div>""")
     return "\n".join(rows)
+
+
+def render_oheng_radar(data):
+    """오행 분포를 오각형 레이더로 그린 인라인 SVG.
+    구형 엔진이 지원하는 도형·그라데이션·텍스트만 쓴다(SVG blur 필터는 쓰지 않음).
+    꼭짓점은 상생 순서(목→화→토→금→수)로 위에서 시계 방향."""
+    dist = data["oheng_distribution"]
+    order = ["목", "화", "토", "금", "수"]
+    W, H, cx, cy, R = 640, 600, 320, 300, 190
+    top = max(max(dist.values()), 1)
+
+    def pt(i, r):
+        a = math.radians(-90 + 72 * i)
+        return cx + r * math.cos(a), cy + r * math.sin(a)
+
+    def poly(r):
+        return " ".join(f"{pt(i, r)[0]:.1f},{pt(i, r)[1]:.1f}" for i in range(5))
+
+    s = [f'<svg xmlns="http://www.w3.org/2000/svg" width="{int(W * .86)}" height="{int(H * .86)}" viewBox="0 0 {W} {H}">',
+         '<defs><radialGradient id="rgv"><stop offset="0" stop-color="#9a7dff" stop-opacity="0.38"/><stop offset="1" stop-color="#9a7dff" stop-opacity="0"/></radialGradient>'
+         '<linearGradient id="rgg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff3c4"/><stop offset="1" stop-color="#d4aa3a"/></linearGradient></defs>',
+         f'<circle cx="{cx}" cy="{cy}" r="{R + 60}" fill="url(#rgv)"/>']
+    for k, frac in enumerate((1 / 3, 2 / 3, 1)):          # 눈금 오각형
+        s.append(f'<polygon points="{poly(R * frac)}" fill="{"rgba(154,125,255,0.07)" if k == 2 else "none"}" stroke="rgba(212,170,58,{0.55 if k == 2 else 0.3})" stroke-width="{2 if k == 2 else 1}"/>')
+    for i in range(5):                                      # 축
+        x, y = pt(i, R)
+        s.append(f'<line x1="{cx}" y1="{cy}" x2="{x:.1f}" y2="{y:.1f}" stroke="rgba(212,170,58,0.28)" stroke-width="1"/>')
+    radii = [max(R * dist[n] / top, R * 0.07) for n in order]
+    dpts = " ".join(f"{pt(i, r)[0]:.1f},{pt(i, r)[1]:.1f}" for i, r in enumerate(radii))
+    s.append(f'<polygon points="{dpts}" fill="rgba(235,195,90,0.30)" stroke="url(#rgg)" stroke-width="4" stroke-linejoin="round"/>')
+    for i, n in enumerate(order):
+        x, y = pt(i, radii[i])
+        s.append(f'<circle cx="{x:.1f}" cy="{y:.1f}" r="9" fill="{OHENG_COLOR_LIGHT[n]}" stroke="#0B0714" stroke-width="3"/>')
+        bx, by = pt(i, R + 52)                              # 바깥 한자 배지 + 개수
+        s.append(f'<circle cx="{bx:.1f}" cy="{by:.1f}" r="31" fill="#120C22" stroke="{OHENG_COLOR_LIGHT[n]}" stroke-width="3"/>'
+                 f'<text x="{bx:.1f}" y="{by + 12:.1f}" text-anchor="middle" font-size="34" font-weight="bold" font-family="Noto Serif CJK KR, serif" fill="{OHENG_COLOR_LIGHT[n]}">{OHENG_HANJA[n]}</text>'
+                 f'<text x="{bx:.1f}" y="{by + 62:.1f}" text-anchor="middle" font-size="24" font-family="Noto Sans CJK KR, sans-serif" fill="#C9C0AC">{dist[n]}개</text>')
+    s.append("</svg>")
+    return "".join(s)
 
 
 # 오행 분포 페이지가 막대그래프만으로 끝나면 여백이 휑해 보인다는 피드백에 따라,
@@ -329,20 +377,37 @@ def _marker_span(marker_id):
     return f'<span class="pagemark">PGMARK_{marker_id}_END</span>'
 
 
+def _num_class(s):
+    """장 번호 글자 수에 따른 크기 클래스(한 글자는 크게, 二十一처럼 길면 작게)."""
+    return {1: "num-1", 2: "num-2"}.get(len(s), "num-3")
+
+
+def _chapter_head_html(num_str, eyebrow, title_html, sub_html="", illust=""):
+    """장 머리: 메달(장 번호) · 영문 라벨 · 제목 · 부제 · 구분선 · 삽화.  배경 장식은 페이지 아트가 담당."""
+    sub = f'<div class="chapter-title-sub">{sub_html}</div>' if sub_html else ""
+    return f"""
+  <div class="chapter-head">
+    <div class="chapter-medal"><img src="orn/medal.png"><div class="num {_num_class(num_str)}">{num_str}</div></div>
+    <div class="chapter-eyebrow">{eyebrow}</div>
+    <div class="chapter-title">{title_html}</div>
+    {sub}
+    <img class="orn-divider" src="orn/divider.png">
+    {illust}
+  </div>"""
+
+
 def _render_pillars_block(data, chapter_num_str, marker_id, watermark=False, illust=""):
+    """사주 원국 장 = 3쪽. 각 쪽을 70~80%만 채워 해설 길이가 조금 달라져도 1~2줄만 다음 쪽으로 넘어가는 일이 없게 한다.
+       ① 장 도입(큰 삽화)  ② 사주 카드 + 일간 해설 + 오행 레이더  ③ 오행 막대 + 해설"""
     wm = WATERMARK_DIV if watermark else ""
+    head = _chapter_head_html(chapter_num_str, "THE FOUR PILLARS", "사주 원국",
+                              _keep_words("태어난 순간의 하늘과 땅 — 여덟 글자"), illust)
     return f"""
 <div class="section-break">
 {wm}{_marker_span(marker_id)}
-  <div class="chapter-head">
-    <div class="chapter-mark">{chapter_num_str}</div>
-    <div class="chapter-eyebrow">THE FOUR PILLARS</div>
-    <div class="chapter-title">사주 원국</div>
-    <div class="chapter-title-sub">{_keep_words("태어난 순간의 하늘과 땅 — 여덟 글자")}</div>
-    <div class="rule"></div>
-    <div class="rings"><div class="r1"></div><div class="r2"></div><div class="r3"></div></div>
-    {illust}
-  </div>
+  {head}
+</div>
+<div class="section-break">
   <div class="myeongsik">
     {render_pillar_cards(data)}
   </div>
@@ -351,10 +416,17 @@ def _render_pillars_block(data, chapter_num_str, marker_id, watermark=False, ill
     f"{max(data['oheng_distribution'], key=data['oheng_distribution'].get)}의 기운이 상대적으로 "
     "강하게 나타나며, 이는 이후 섹션에서 다루는 성격과 흐름의 바탕이 됩니다.")}</p>
   </div>
+  <div class="oheng-block">
+    <div class="chapter-head">
+      <div class="chapter-eyebrow">FIVE ELEMENTS</div>
+      <div class="chapter-title" style="font-size:80px;">오행(五行) 분포</div>
+      <img class="orn-divider" src="orn/divider.png">
+    </div>
+    <div class="oheng-radar">{render_oheng_radar(data)}</div>
+  </div>
 </div>
 <div class="section-break">
-  <div class="chapter-title-sub" style="margin-top:0; font-size:44px;">오행(五行) 분포</div>
-  <div class="oheng-panel">
+  <div class="oheng-panel" style="margin-top:6mm;">
     {render_oheng_bars(data)}
   </div>
   <div class="body-text" style="margin-top:40px;">
@@ -368,7 +440,7 @@ def _render_section_block(section_key, data, section_text, chapter_num_str, mark
     extra_visual = ""
     if section_key == "대운흐름":
         extra_visual = f"""
-  <div class="chapter-title-sub" style="margin-top:-6px;">{_keep_words(f"{data['daeun']['direction']} · {data['daeun']['daeun_start_age']}세부터 시작")}</div>
+  <div class="chapter-title-sub" style="margin-top:-6px; text-align:center;">{_keep_words(f"{data['daeun']['direction']} · {data['daeun']['daeun_start_age']}세부터 시작")}</div>
   <div class="daeun-timeline">
     {render_daeun_steps(data)}
   </div>"""
@@ -381,19 +453,13 @@ def _render_section_block(section_key, data, section_text, chapter_num_str, mark
         callout_html = f'<div class="callout">{_format_prose(CALLOUTS[section_key])}</div>'
 
     wm = WATERMARK_DIV if watermark else ""
+    head = _chapter_head_html(chapter_num_str, spec['eyebrow'], _keep_words(spec['title']),
+                              "" if section_key == "대운흐름" else _keep_words(spec["subtitle"]), illust)
 
     return f"""
 <div class="section-break">
 {wm}{_marker_span(marker_id)}
-  <div class="chapter-head">
-    <div class="chapter-mark">{chapter_num_str}</div>
-    <div class="chapter-eyebrow">{spec['eyebrow']}</div>
-    <div class="chapter-title">{_keep_words(spec['title'])}</div>
-    {subtitle}
-    <div class="rule"></div>
-    <div class="rings"><div class="r1"></div><div class="r2"></div><div class="r3"></div></div>
-    {illust}
-  </div>
+  {head}
   {extra_visual}
   <div class="body-text">
     {paragraphs_with_mid(section_text, illust_mid)}
@@ -419,7 +485,7 @@ def _render_toc_block(section_keys, page_map, watermark=False):
 
     items = [("一", "사주 원국 · 오행 분포", _p("pillars"))]
     for i, key in enumerate(section_keys):
-        marker_id = f"sec_{i}_{key}"
+        marker_id = f"sec_{i}"
         items.append((_chapter_mark(i + 1), SECTION_SPECS[key]["title"], _p(marker_id)))
 
     rows = "\n".join(
@@ -431,17 +497,20 @@ def _render_toc_block(section_keys, page_map, watermark=False):
     wm = WATERMARK_DIV if watermark else ""
     return f"""
 <div>
-{wm}  <div class="chapter-eyebrow">CONTENTS</div>
-  <div class="chapter-title">목차</div>
-  <div class="rule"></div>
+{wm}  <div class="toc-head">
+    <div class="chapter-eyebrow">CONTENTS</div>
+    <div class="chapter-title">목차</div>
+    <img class="orn-divider" src="orn/divider.png">
+  </div>
   {rows}
 </div>"""
 
 
-def _build_body_html(data, sections, section_order, page_map, watermark=False):
+def _build_body_html(data, sections, section_order, page_map, watermark=False, bg_css=None):
     template_path = os.path.join(ASSETS_DIR, "template_body.html")
     with open(template_path, "r", encoding="utf-8") as f:
         html = f.read()
+    html = html.replace("{{BG_CSS}}", bg_css if bg_css is not None else _BG_LEGACY)
 
     used_illust = set()
     parts = [_render_toc_block(section_order, page_map, watermark=watermark)]
@@ -449,13 +518,31 @@ def _build_body_html(data, sections, section_order, page_map, watermark=False):
                                        illust=_illustration_html("pillars", used_illust)))
     for i, key in enumerate(section_order):
         chapter_num_str = _chapter_mark(i + 1)
-        marker_id = f"sec_{i}_{key}"
+        marker_id = f"sec_{i}"
         parts.append(_render_section_block(key, data, sections[key], chapter_num_str, marker_id, watermark=watermark,
                                            illust=_illustration_html(key, used_illust),
                                            illust_mid=_illustration_html("성격" if _theme_for(key) != "char" else key, used_illust)))
 
+    parts.append('<div class="end-orn"><img src="orn/end.png"><div>金 · 命 · 式</div></div>')   # 맺음 장식
     body_html = "\n".join(parts)
     return html.replace("{{BODY_PAGES}}", body_html)
+
+
+# ---------------------------------------------------------------------------
+# [2026-10 개편] 배경 아트 모드
+#   글자 층(wkhtmltopdf)은 배경을 칠하지 않아 PDF가 "투명"이다(2026-10 실측: 모서리 알파 0).
+#   그래서 미리 구워 둔 배경 아트(별·성운·금 액자·모서리 문양·마법진 — report_assets/art/*.pdf)를
+#   pypdf로 페이지 "밑에" 깔아 합친다. 구형 엔진이 못 그리는 효과를 전부 아트로 해결하는 방식.
+#   아트 파일/pypdf가 없거나 합성이 실패하면 예전 방식(CSS 검정 줄무늬 배경)으로 자동 폴백한다.
+# ---------------------------------------------------------------------------
+_BG_LEGACY = "background: #0B0A09 url('bg_stripes.png');"
+_BG_ART = "background: transparent;"
+COVER_NAME_TOP, COVER_META_TOP = "1256px", "1350px"     # 표지 아트(아치) 안쪽 하단의 이름/출생정보 위치(글자 층 좌표계 px)
+FOOTER_NUM_TOP = "87px"                                # 하단 중앙 쪽번호 타원 안의 세로 위치(바닥글 영역 기준, 글자 층 px)
+
+
+def _art_ready():
+    return _HAVE_PYPDF and all(os.path.exists(os.path.join(ART_DIR, f"{n}.pdf")) for n in ("cover", "page", "opener"))
 
 
 def _run_wkhtmltopdf(args):
@@ -463,17 +550,36 @@ def _run_wkhtmltopdf(args):
                     stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
 
 
+def _pdf_page_count(path):
+    if _HAVE_PYPDF:
+        return len(PdfReader(path).pages)
+    info = subprocess.run(["pdfinfo", path], check=True, capture_output=True, text=True).stdout
+    for line in info.splitlines():
+        if line.startswith("Pages:"):
+            return int(line.split(":", 1)[1].strip())
+    return 1
+
+
+def _pdf_unite(paths, out_pdf):
+    """PDF 이어붙이기: poppler의 pdfunite 우선, 없으면 pypdf."""
+    try:
+        subprocess.run(["pdfunite", *paths, out_pdf], check=True)
+    except (FileNotFoundError, subprocess.CalledProcessError):
+        if not _HAVE_PYPDF:
+            raise
+        w = PdfWriter()
+        for p in paths:
+            w.append(p)
+        with open(out_pdf, "wb") as f:
+            w.write(f)
+
+
 def _find_marker_pages(pdf_path, marker_ids):
     """
     pdftotext로 pdf_path의 각 페이지 텍스트를 확인해서, 각 marker_id가
     처음 등장하는 (1부터 시작하는) 로컬 페이지 번호를 찾는다.
     """
-    info = subprocess.run(["pdfinfo", pdf_path], check=True, capture_output=True, text=True).stdout
-    total_pages = 1
-    for line in info.splitlines():
-        if line.startswith("Pages:"):
-            total_pages = int(line.split(":", 1)[1].strip())
-            break
+    total_pages = _pdf_page_count(pdf_path)
 
     remaining = set(marker_ids)
     found = {}
@@ -482,26 +588,60 @@ def _find_marker_pages(pdf_path, marker_ids):
             break
         text = subprocess.run(
             ["pdftotext", "-f", str(page), "-l", str(page), pdf_path, "-"],
-            check=True, capture_output=True, text=True
-        ).stdout
+            check=True, capture_output=True, text=True, encoding="utf-8", errors="replace"   # 인코딩 명시(윈도우 로컬 실행 대비)
+        ).stdout or ""
+        flat = re.sub(r"\s+", "", text)      # poppler 버전에 따라 작은 글자 사이에 공백이 끼므로 공백을 지우고 비교
         for marker_id in list(remaining):
-            if f"PGMARK_{marker_id}_END" in text:
+            if f"PGMARK_{marker_id}_END" in flat:
                 found[marker_id] = page
                 remaining.discard(marker_id)
     return found
 
 
-def build_report(data, name, birth_info, sections, section_order=None,
-                  product_name="사주 명식 리포트", output_pdf="saju_report.pdf",
-                  watermark=False):
-    """
-    sections: {section_key: 해석문_텍스트} 딕셔너리
-    section_order: 섹션을 표시할 순서 (list of keys). None이면 sections의 키 순서 사용.
-    watermark: True면 모든 페이지에 '샘플 · 미리보기' 워터마크를 찍는다
-               (실제 결제된 리포트와 구분하기 위한 테스트/샘플용 표시).
-    """
-    if section_order is None:
-        section_order = list(sections.keys())
+def _fill_template(src_name, dst_path, values):
+    """report_assets/<src_name> 의 {{KEY}} 를 채워 dst_path(같은 폴더 → 상대경로 자원이 그대로 풀림)에 쓴다."""
+    with open(os.path.join(ASSETS_DIR, src_name), "r", encoding="utf-8") as f:
+        html = f.read()
+    for k, v in values.items():
+        html = html.replace("{{" + k + "}}", v)
+    with open(dst_path, "w", encoding="utf-8") as f:
+        f.write(html)
+
+
+def _compose_with_art(cover_pdf, body_pdf, opener_pages, out_pdf):
+    """글자 층(표지 1장 + 본문) 밑에 배경 아트를 깔아 하나의 PDF로 만든다.
+    opener_pages: 본문 PDF 안에서 장(章)이 시작하는 로컬 페이지 번호 집합 → 그 페이지는 '장 도입' 아트."""
+    arts = {n: PdfReader(os.path.join(ART_DIR, f"{n}.pdf")).pages[0] for n in ("cover", "page", "opener")}
+    cover_reader, body_reader = PdfReader(cover_pdf), PdfReader(body_pdf)
+    writer = PdfWriter()
+
+    def put(art_name, text_page):
+        tw, th = float(text_page.mediabox.width), float(text_page.mediabox.height)
+        bg = arts[art_name]
+        sx, sy = tw / float(bg.mediabox.width), th / float(bg.mediabox.height)    # 글자 층과 크기를 정확히 맞춘다
+        page = writer.add_blank_page(width=tw, height=th)
+        page.merge_transformed_page(bg, Transformation().scale(sx, sy))           # 아래: 배경 아트
+        page.merge_page(text_page)                                                  # 위: 글자 층
+
+    put("cover", cover_reader.pages[0])
+    for i, tp in enumerate(body_reader.pages, start=1):
+        put("opener" if i in opener_pages else "page", tp)
+    for pg in writer.pages:                 # 합치는 과정에서 풀린 내용 스트림(글로우 벡터 경로 등)을 다시 압축
+        try:
+            pg.compress_content_streams()
+        except Exception:
+            pass
+    try:
+        writer.compress_identical_objects(remove_identicals=True, remove_orphans=True)   # 같은 아트 그림은 한 번만 저장
+    except Exception:
+        pass
+    with open(out_pdf, "wb") as f:
+        writer.write(f)
+
+
+def _build(data, name, birth_info, sections, section_order, output_pdf, watermark, art):
+    mode = "art" if art else "legacy"
+    bg_css = _BG_ART if art else _BG_LEGACY
 
     # output_pdf(주문별로 고유)를 기반으로 중간 파일명도 고유하게 만든다.
     # 고정된 파일명을 쓰면 여러 주문이 동시에 처리될 때 서로의 중간 파일을
@@ -515,22 +655,23 @@ def build_report(data, name, birth_info, sections, section_order=None,
     body_pass1_pdf_path = tmp("_body_pass1.pdf")
     body_final_html_path = tmp("_body_final.html")
     body_final_pdf_path = tmp("_body_final.pdf")
+    header_path = tmp("_header.html")
+    footer_path = tmp("_footer.html")
 
     try:
-        # ---- 1) 표지 렌더링 (여백 0, 별도 문서) ----------------------------
-        cover_template_path = os.path.join(ASSETS_DIR, "template_cover.html")
-        with open(cover_template_path, "r", encoding="utf-8") as f:
-            cover_html = f.read()
-        cover_html = cover_html.replace("{{NAME}}", _keep_words(name))
-        cover_html = cover_html.replace("{{BIRTH_INFO}}", _keep_words(birth_info))
-        cover_html = cover_html.replace("{{ISSUE_DATE}}", "2026")
-        cover_html = cover_html.replace(
-            "{{WATERMARK}}",
-            '<div class="watermark"><div class="watermark-mark">SAMPLE · 미리보기</div></div>' if watermark else ""
-        )
-        with open(cover_html_path, "w", encoding="utf-8") as f:
-            f.write(cover_html)
+        # ---- 0) 머리글·바닥글 (모드별로 배경/쪽번호 위치가 다름) ---------------
+        hf_vals = {"BG_CSS": bg_css, "MODE": mode, "NUM_TOP": FOOTER_NUM_TOP}
+        _fill_template("header.html", header_path, hf_vals)
+        _fill_template("footer.html", footer_path, hf_vals)
 
+        # ---- 1) 표지 렌더링 (여백 0, 별도 문서) ----------------------------
+        _fill_template("template_cover.html", cover_html_path, {
+            "BG_CSS": bg_css, "MODE": mode,
+            "NAME_TOP": COVER_NAME_TOP, "META_TOP": COVER_META_TOP,
+            "NAME": _keep_words(name), "BIRTH_INFO": _keep_words(birth_info),
+            "ISSUE_DATE": str(datetime.date.today().year),
+            "WATERMARK": '<div class="watermark"><div class="watermark-mark">SAMPLE · 미리보기</div></div>' if watermark else "",
+        })
         _run_wkhtmltopdf([
             "--encoding", "utf-8", "--enable-local-file-access",
             "--page-width", PAGE_WIDTH, "--page-height", PAGE_HEIGHT,
@@ -540,12 +681,10 @@ def build_report(data, name, birth_info, sections, section_order=None,
         ])
 
         # ---- 2) 본문 1차 렌더링 (목차 페이지번호는 아직 모름 → 마커만 심음) ----
-        body_pass1_html = _build_body_html(data, sections, section_order, page_map={}, watermark=watermark)
+        body_pass1_html = _build_body_html(data, sections, section_order, page_map={}, watermark=watermark, bg_css=bg_css)
         with open(body_pass1_html_path, "w", encoding="utf-8") as f:
             f.write(body_pass1_html)
 
-        footer_path = os.path.join(ASSETS_DIR, "footer.html")
-        header_path = os.path.join(ASSETS_DIR, "header.html")
         _run_wkhtmltopdf([
             "--encoding", "utf-8", "--enable-local-file-access",
             "--page-width", PAGE_WIDTH, "--page-height", PAGE_HEIGHT,
@@ -558,14 +697,14 @@ def build_report(data, name, birth_info, sections, section_order=None,
         ])
 
         # ---- 3) 마커가 실제로 몇 페이지에 찍혔는지 확인 ------------------------
-        marker_ids = ["pillars"] + [f"sec_{i}_{key}" for i, key in enumerate(section_order)]
+        marker_ids = ["pillars"] + [f"sec_{i}" for i, _ in enumerate(section_order)]
         local_pages = _find_marker_pages(body_pass1_pdf_path, marker_ids)
         # 표지(cover.pdf)가 항상 1페이지를 차지하므로, 실제 최종 문서에서의
         # 페이지 번호는 본문 내 로컬 페이지 번호 + 1 이다.
         page_map = {marker_id: local_page + 1 for marker_id, local_page in local_pages.items()}
 
         # ---- 4) 본문 최종 렌더링 (목차에 실제 페이지번호 반영) -----------------
-        body_final_html = _build_body_html(data, sections, section_order, page_map=page_map, watermark=watermark)
+        body_final_html = _build_body_html(data, sections, section_order, page_map=page_map, watermark=watermark, bg_css=bg_css)
         with open(body_final_html_path, "w", encoding="utf-8") as f:
             f.write(body_final_html)
 
@@ -581,15 +720,39 @@ def build_report(data, name, birth_info, sections, section_order=None,
             body_final_pdf_path,
         ])
 
-        # ---- 5) 표지 + 본문 합치기 --------------------------------------------
-        subprocess.run(["pdfunite", cover_pdf_path, body_final_pdf_path, output_pdf], check=True)
+        # ---- 5) 합치기: 아트 모드는 배경 아트 위에 글자 층, 기본 모드는 표지+본문 이어붙이기 ----
+        if art:
+            _compose_with_art(cover_pdf_path, body_final_pdf_path, set(local_pages.values()), output_pdf)
+        else:
+            _pdf_unite([cover_pdf_path, body_final_pdf_path], output_pdf)
 
     finally:
         for p in [cover_html_path, cover_pdf_path, body_pass1_html_path, body_pass1_pdf_path,
-                  body_final_html_path, body_final_pdf_path]:
+                  body_final_html_path, body_final_pdf_path, header_path, footer_path]:
             if os.path.exists(p):
                 os.remove(p)
 
+
+def build_report(data, name, birth_info, sections, section_order=None,
+                  product_name="사주 명식 리포트", output_pdf="saju_report.pdf",
+                  watermark=False):
+    """
+    sections: {section_key: 해석문_텍스트} 딕셔너리
+    section_order: 섹션을 표시할 순서 (list of keys). None이면 sections의 키 순서 사용.
+    watermark: True면 모든 페이지에 '샘플 · 미리보기' 워터마크를 찍는다
+               (실제 결제된 리포트와 구분하기 위한 테스트/샘플용 표시).
+    """
+    if section_order is None:
+        section_order = list(sections.keys())
+
+    if _art_ready():
+        try:
+            _build(data, name, birth_info, sections, section_order, output_pdf, watermark, art=True)
+            print(f"완성: {output_pdf}")
+            return
+        except Exception as e:      # 아트 합성이 어떤 이유로든 실패하면, 고객이 PDF를 못 받는 일이 없도록 예전 방식으로 다시 만든다
+            print(f"[report] 배경 아트 합성 실패({e!r}) → 기본 모드로 다시 만듭니다")
+    _build(data, name, birth_info, sections, section_order, output_pdf, watermark, art=False)
     print(f"완성: {output_pdf}")
 
 
