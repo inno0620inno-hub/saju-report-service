@@ -556,7 +556,8 @@
 
   // 분량이 많아 오래 걸리는 상품만 소요 시간을 따로 안내한다(2026-10-13 사용자 지시: 프리미엄만 2시간 이상 명시). 나머지는 기본 '1시간 내외'.
   const WAIT_NORMAL = '입금 확인 후 1시간 내외로';
-  const LONG_WAIT = { premium: { card: '분량이 많아 입금 확인 후 2시간 이상 걸려요', line: '입금 확인 후 <b>2시간 이상</b>(분량이 많은 풀이예요)' } };
+  const LONG_WAIT = {};   // 2026-10-25 사용자 지시: '2시간 이상' 문구 삭제
+  const EVENT_ORIG = { full: 39900, premium: 69900 };   // 오픈 기념 특가 정가(취소선)
 
   async function loadProducts() {
     try {
@@ -571,7 +572,7 @@
           <div class="p-name">${p.name}</div>
           <div class="p-desc">${p.description}</div>
           ${LONG_WAIT[p.id] ? `<div class="p-wait">※ ${LONG_WAIT[p.id].card}</div>` : ''}
-          <div class="p-price">${p.price.toLocaleString()}원</div>
+          <div class="p-price">${EVENT_ORIG[p.id] > p.price ? `<s style="opacity:.55;font-size:.8em">${EVENT_ORIG[p.id].toLocaleString()}원</s> ` : ''}${p.price.toLocaleString()}원${EVENT_ORIG[p.id] > p.price ? ` <small>금빛 오픈 기념 특가 ${Math.round((1 - p.price / EVENT_ORIG[p.id]) * 100)}%</small>` : ''}</div>
         `;
         card.addEventListener('click', () => selectProduct(p.id));
         productGrid.appendChild(card);

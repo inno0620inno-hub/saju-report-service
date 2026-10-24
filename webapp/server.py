@@ -107,9 +107,9 @@ def now_kst() -> datetime:
 
 def lead_minutes(product_id: str) -> int:
     """예약 발송 주문의 PDF를 예약 시각보다 얼마나 일찍 만들기 시작할지(분).
-    섹션당 10분 + 20분(Gemini가 느린 날 대비 넉넉히), 최대 4시간. 일찍 끝나면 예약 시각까지 보관했다가 정시에 발송한다."""
+    섹션당 2분 + 20분(10/25 실측 프리미엄 34섹션 15분 안팎, 느린 날 대비 넉넉히), 최대 90분. 일찍 끝나면 예약 시각까지 보관했다가 정시에 발송한다."""
     n = len(PRODUCTS_BY_ID.get(product_id, {}).get("sections", [None] * 6))
-    return min(n * 10 + 20, 240)
+    return min(n * 2 + 20, 90)
 
 
 STATUS_LABELS = {

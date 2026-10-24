@@ -163,6 +163,11 @@
       background: linear-gradient(180deg, #f6e3a1, #c39a3c); box-shadow: 0 0 12px rgba(212,175,90,.6); }
   .card .n { font-family: 'Noto Serif KR', serif; font-size: 16.5px; font-weight: 700; color: #fff7e0; }
   .card .d { font-size: 12.5px; opacity: .78; margin-top: 4px; line-height: 1.45; }
+  .event-banner { margin: 0 0 14px; padding: 10px 14px; border-radius: 10px; border: 1px solid var(--gold-soft); background: linear-gradient(160deg, rgba(212,175,90,.18), rgba(24,14,52,.6)); text-align: center; font-size: 12.5px; line-height: 1.55; color: var(--gold-soft); }
+  .event-banner b { display: block; font-family: 'Noto Serif KR', serif; font-size: 14px; color: #fff7e0; margin-bottom: 2px; }
+  .card .p s.was { font-size: 12.5px; font-weight: 400; opacity: .6; margin-right: 4px; }
+  .card .p s.was { -webkit-text-fill-color: rgba(255,247,224,.6); color: rgba(255,247,224,.6); }
+  .card .p em.off, .card .p .off { -webkit-text-fill-color: #1a1405;  font-style: normal; font-size: 11px; font-weight: 700; padding: 1px 7px; border-radius: 999px; margin-left: 4px; color: #1a1405; background: linear-gradient(180deg, #f6e3a1, #c39a3c); vertical-align: 2px; }
   .card .p { font-family: 'Noto Serif KR', serif; font-size: 17px; margin-top: 8px; font-weight: 700; }
   .card .wait { margin-top: 7px; font-size: 12px; font-weight: 700; color: var(--gold-soft); }
   .wait-note { margin: 0 0 14px; padding: 10px 14px; border-radius: 8px; border: 1px solid var(--line); background: var(--glass); font-size: 13px; line-height: 1.55; text-align: center; color: var(--gold-soft); }
@@ -381,8 +386,12 @@ const FALLBACK_PRODUCTS = [
 ];
 
 /* 분량이 많아 오래 걸리는 상품만 소요 시간을 따로 안내한다(상품 id → 문구). 여기에 없는 상품은 기본 '입금 확인 후 1시간 내외'. (2026-10-13 사용자 지시: 프리미엄만 2시간 이상 명시) */
+/* 오픈 기념 특가(2026-10-25 사용자 지시): 정가(취소선)는 여기서만 관리. 실제 결제 금액은 서버 products 의 price. */
+const EVENT = { name: '금빛 오픈 기념 특가', orig: { full: 39900, premium: 69900 } };
+const origOf = p => (EVENT.orig[p.id] && EVENT.orig[p.id] > Number(p.price)) ? EVENT.orig[p.id] : 0;
+const offPct = p => Math.round((1 - Number(p.price) / origOf(p)) * 100);
 const WAIT_NORMAL = '입금 확인 후 1시간 내외로';
-const LONG_WAIT = { premium: { card: '분량이 많아 입금 확인 후 2시간 이상 걸려요', line: '입금 확인 후 <b>2시간 이상</b>(분량이 많은 풀이예요)' } };
+const LONG_WAIT = {};   // 2026-10-25 사용자 지시: 프리미엄 '2시간 이상' 문구 삭제(실측 15분 안팎). 오래 걸리는 상품이 생기면 여기에 추가
 const waitLine = id => (LONG_WAIT[id] ? LONG_WAIT[id].line : WAIT_NORMAL);
 
 /* ===== 상태 ===== */
@@ -719,7 +728,7 @@ const R = {
   product(st) {
     const FEATURED = ['full', 'premium'];          // 대표 상품 2개는 크게, 나머지는 접어서 표시
     let more = false;
-    const price = p => `${Number(p.price).toLocaleString()}원`;
+    const price = p => origOf(p) ? `<s class="was">${origOf(p).toLocaleString()}원</s> ${Number(p.price).toLocaleString()}원 <em class="off">${offPct(p)}%</em>` : `${Number(p.price).toLocaleString()}원`;
     const waitHtml = p => LONG_WAIT[p.id] ? `<div class="wait">※ ${esc(LONG_WAIT[p.id].card)}</div>` : '';      // 오래 걸리는 상품(프리미엄)만 소요 시간 표시
     const card = (p, compact) => compact
       ? `<div class="card compact ${S.product_id === p.id ? 'sel' : ''}" data-id="${p.id}"><div class="top"><span class="n">${esc(p.name)}</span><span class="p foil">${price(p)}</span></div><div class="d">${esc(p.description || '')}</div>${waitHtml(p)}</div>`
@@ -733,7 +742,7 @@ const R = {
       view.querySelectorAll('.card').forEach(c => c.onclick = () => { S.product_id = c.dataset.id; draw(); });
       const mb = view.querySelector('#more'); if (mb) mb.onclick = () => { more = !more; draw(); };
     };
-    stage(`<div class="cards"></div><button class="btn primary" id="ok">이 풀이로 받겠습니다</button>`,
+    stage(`<div class="event-banner"><b>✦ ${EVENT.name} ✦</b><span>종합·프리미엄 풀이를 최대 ${Math.max(...products.map(p => origOf(p) ? offPct(p) : 0))}% 할인된 가격으로 만나 보세요. 행사 가격은 예고 없이 종료될 수 있어요.</span></div><div class="cards"></div><button class="btn primary" id="ok">이 풀이로 받겠습니다</button>`,
           { eyebrow:'풀이의 깊이', line:'어느 깊이까지<br>들여다볼까요?' });
     draw();
     if (!productsLoaded) fetch(API_BASE + '/api/products').then(r => r.json()).then(p => { if (Array.isArray(p) && p.length) { products = p; if (!products.find(x => x.id === S.product_id)) S.product_id = products[0].id; if (STEPS[idx].type === 'product') draw(); } }).catch(() => {}).finally(() => productsLoaded = true);
@@ -879,7 +888,7 @@ const R = {
       <h2>${esc(S.name)}님의 여덟 글자,<br>금빛도사가 받아 두었습니다.</h2>
       <div class="box orn"><b>${esc(p.name)}</b><br>${S.is_lunar ? `음력 ${esc(S.birth_date)}${S.is_leap_month ? ' (윤달)' : ''} 기준으로 접수<br>` : ''}
         ${S.delivery_mode === 'scheduled' ? `발송 예약: ${esc(S.schedule_date)} ${esc(S.schedule_time)}` : '입금 확인 후 순차 발송'}
-        <div class="foil" style="font-family:'Noto Serif KR',serif;font-weight:700;font-size:32px;margin-top:8px">${amount.toLocaleString()}원</div></div>
+        ${origOf(p) ? `<div style="margin-top:8px;font-size:13px;opacity:.7"><s>${origOf(p).toLocaleString()}원</s> · ${EVENT.name} ${offPct(p)}% 할인 적용</div>` : ''}<div class="foil" style="font-family:'Noto Serif KR',serif;font-weight:700;font-size:32px;margin-top:4px">${amount.toLocaleString()}원</div></div>
       ${mobile ? `<a class="btn primary" href="${toss}" style="text-decoration:none;margin-top:16px">토스로 바로 송금하기</a>` : ''}
       <div class="box"><b>${mobile ? '다른 은행 앱으로 입금하시려면' : '입금 안내'}</b><br>${BANK.bank} ${BANK.no}<br>예금주 ${esc(BANK.holder)}
         <div class="row" style="margin-top:6px"><button class="chip" id="copyAcct">계좌번호 복사</button><button class="chip" id="copyAmt">금액 복사</button></div>
