@@ -572,7 +572,7 @@
           <div class="p-name">${p.name}</div>
           <div class="p-desc">${p.description}</div>
           ${LONG_WAIT[p.id] ? `<div class="p-wait">※ ${LONG_WAIT[p.id].card}</div>` : ''}
-          <div class="p-price">${EVENT_ORIG[p.id] > p.price ? `<s style="opacity:.55;font-size:.8em">${EVENT_ORIG[p.id].toLocaleString()}원</s> ` : ''}${p.price.toLocaleString()}원${EVENT_ORIG[p.id] > p.price ? ` <small>금빛 오픈 기념 특가 ${Math.round((1 - p.price / EVENT_ORIG[p.id]) * 100)}%</small>` : ''}</div>
+          <div class="p-price">${EVENT_ORIG[p.id] > p.price ? `<s style="opacity:.8;font-size:1em">${EVENT_ORIG[p.id].toLocaleString()}원</s> ` : ''}${p.price.toLocaleString()}원${EVENT_ORIG[p.id] > p.price ? ` <small>금빛 오픈 기념 특가 ${Math.round((1 - p.price / EVENT_ORIG[p.id]) * 100)}%</small>` : ''}</div>
         `;
         card.addEventListener('click', () => selectProduct(p.id));
         productGrid.appendChild(card);
